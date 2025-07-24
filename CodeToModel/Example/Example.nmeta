@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<nmeta:Namespace xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Uri="http://github.com/CodeToModel" Prefix="Sentence" Name="Example" xmlns:xmi="http://www.omg.org/XMI" xmlns:nmeta="http://nmf.codeplex.com/nmeta/">
+  <Types xsi:type="nmeta:Class" IdentifierScope="Local" Name="Sentence">
+    <References ReferenceType="nmeta:Class #//Word" UpperBound="64" Name="Words" />
+    <References ReferenceType="nmeta:Class #//Word" Name="FirstWord" />
+    <Attributes Type="nmeta:PrimitiveType http://nmf.codeplex.com/nmeta/#//Integer" Name="WordCount" />
+  </Types>
+  <Types xsi:type="nmeta:Class" IdentifierScope="Local" Name="Word">
+    <Attributes Type="nmeta:PrimitiveType http://nmf.codeplex.com/nmeta/#//String" Name="Text" />
+  </Types>
+</nmeta:Namespace>

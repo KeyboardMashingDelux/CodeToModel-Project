@@ -1,0 +1,144 @@
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.CSharp;
+using NMF.Models.Meta;
+using NMF.Models.Repository;
+using System.CodeDom;
+using System.CodeDom.Compiler;
+using System.Linq;
+
+
+namespace CTMGenerator {
+
+    public class ModelBuilder {
+
+        private ModelRepository? ModelRepository;
+        private INamespace? Namespace;
+
+        private string? Name, Prefix, Suffix, OutputPath;
+
+        public ModelBuilder() {
+        
+        }
+
+        /// <summary>
+        /// Creates a <typeparamref name="ModelRepository"/> and <typeparamref name="Namespace"/>. 
+        /// <para/>
+        /// This needs to be the first methode called!
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <param name="filename"></param>
+        public void Initalize(string? uri, string? filename) {
+            Uri namespaceURI = new(uri == null ? ModelBuilderHelper.DefaultUri : uri);
+            (Name, Prefix, Suffix) = ModelBuilderHelper.GetFilenameInfo(filename);
+
+            ModelRepository = new ModelRepository();
+            Namespace = new Namespace() {
+                Name = Name,
+                Prefix = Prefix,
+                Uri = namespaceURI,
+            };
+        }
+
+        public void AddElement(ITypeSymbol element) {
+            switch (element.TypeKind) {
+                case TypeKind.Interface:
+                    AddClass(element);
+                    break;
+                case TypeKind.Array:
+                    break;
+                default: return;
+            }
+        }
+
+        private void AddClass(ITypeSymbol element) {
+            if (string.IsNullOrWhiteSpace(OutputPath)) {
+                OutputPath = ModelBuilderHelper.GetSavePath(element);
+            }
+
+            var elementClass = new Class {
+                Name = element.Name.Substring(1),
+                // TODO Depend abstract state on attribute
+                IsAbstract = element.TypeKind != TypeKind.Interface && element.IsAbstract
+            };
+            Namespace?.Types.Add(elementClass);
+        }
+
+        /// <summary>
+        /// Saves the created model. Result should be saved to the same location as the first added element.
+        /// Otherwise will be put to the root of the drive.
+        /// </summary>
+        /// <exception cref="InvalidOperationException"></exception>
+        public void DoSave() {
+            if (ModelRepository == null) {
+                throw new InvalidOperationException("Did you forget to call ModelBuilder's initalize()?");
+            }
+
+            ModelRepository.Save(Namespace, $"{OutputPath}/{Name}.{Suffix}");
+        }
+
+        public string DoCreateCode() {
+            if (ModelRepository == null) {
+                throw new InvalidOperationException();
+            }
+
+            // Creates compile unit from Namespace data (Code model - Keine Datei - Sprachunabhängig
+            var ccu = MetaFacade.CreateCode(Namespace, ModelBuilderHelper.GetAmbientNamespaceName(Name));
+            // Interfaces need to be removed!
+            //ccu = RemoveInterfaces(ccu);
+
+            string tmp = "";
+            CodeNamespaceCollection nsCollection = ccu.Namespaces;
+            foreach (CodeNamespace cn in nsCollection) {
+                List<int> interfacesToRemove = [];
+                CodeTypeDeclarationCollection types = cn.Types;
+                foreach (CodeTypeDeclaration type in types) {
+                    if (type.IsInterface) {
+                        interfacesToRemove.Add(types.IndexOf(type));
+                    }
+                }
+
+                foreach (int typeIndex in interfacesToRemove) {
+                    tmp += typeIndex + " | ";
+                    if (typeIndex == -1) { continue; }
+                    types.RemoveAt(typeIndex);
+                }
+            }
+
+            StringWriter writer = new();
+            CodeGeneratorOptions cgo = new() {
+                IndentString = "\t"
+            };
+            CSharpCodeProvider cscp = new();
+            //cscp.GenerateCodeFromCompileUnit(ccu, writer, cgo);
+            //return writer.ToString();
+
+            // Creates actual code 
+            MetaFacade.GenerateCode(ccu, cscp, "D:\\Tools\\Microsoft Visual Studio\\Repos\\Code First Modeling\\CodeToModel\\Generated\\CTMGenerator\\", true);
+            return tmp;
+        }
+
+        private CodeCompileUnit RemoveInterfaces(CodeCompileUnit ccu) {
+            CodeNamespaceCollection nsCollection = ccu.Namespaces;
+            foreach (CodeNamespace cn in nsCollection) {
+                List<int> interfacesToRemove = [];
+                CodeTypeDeclarationCollection types = cn.Types;
+                foreach (CodeTypeDeclaration type in types) {
+                    if (type.IsInterface) {
+                        interfacesToRemove.Add(types.IndexOf(type));
+                    }
+                }
+
+                foreach (int typeIndex in interfacesToRemove) {
+                    if (typeIndex == -1) { continue; }
+                    types.RemoveAt(typeIndex);
+                }
+            }
+
+            return ccu;
+        }      
+        
+        public string? GetName() {
+            return Name;
+        }
+    }
+}

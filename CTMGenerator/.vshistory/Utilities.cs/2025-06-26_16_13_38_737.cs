@@ -1,0 +1,57 @@
+﻿
+
+using Microsoft.CodeAnalysis;
+using NMF.Models;
+using System;
+using System.Collections.Immutable;
+using System.Runtime.InteropServices.ComTypes;
+using System.Xml.Linq;
+
+namespace CTMGenerator {
+    public class Utilities {
+        private const string AttributesLibName = "CTMLib";
+
+        /// <summary>
+        /// Finds the first occurence of an attribute by the given name.
+        /// </summary>
+        /// <param name="attributes"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public static AttributeData? GetAttributeByName(ImmutableArray<AttributeData> attributes, string name) {
+            foreach (var attribute in attributes) {
+                var attrClass = attribute.AttributeClass;
+                if (attrClass?.Name == name && attrClass.ContainingNamespace is {
+                                                            Name: AttributesLibName,
+                                                            ContainingNamespace.IsGlobalNamespace: true
+                                                            }
+                    ) {
+                    return attribute;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Finds all occurences of an attribute by the given name.
+        /// </summary>
+        /// <param name="attributes"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public static List<AttributeData> GetAttributesByName(ImmutableArray<AttributeData> attributes, string name) {
+            List<AttributeData> result = [];
+            foreach (var attribute in attributes) {
+                var attrClass = attribute.AttributeClass;
+                if (attrClass?.Name == name && attrClass.ContainingNamespace is {
+                    Name: AttributesLibName,
+                    ContainingNamespace.IsGlobalNamespace: true
+                }
+                    ) {
+                    result.Add(attribute);
+                }
+            }
+
+            return result;
+        }
+    }
+}

@@ -1,0 +1,10 @@
+﻿; Unshipped analyzer release
+; https://github.com/dotnet/roslyn-analyzers/blob/main/src/Microsoft.CodeAnalysis.Analyzers/ReleaseTrackingAnalyzers.Help.md
+
+### New Rules
+
+Rule ID | Category | Severity | Notes
+--------|----------|----------|-------
+CTM001 | CodeToModel | Error | CTMDiagnostics
+CTM002 | CodeToModel | Error | CTMDiagnostics
+CTM003 | CodeToModel | Info | CTMDiagnostics
