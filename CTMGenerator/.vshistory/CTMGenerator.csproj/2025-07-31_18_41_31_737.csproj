@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<LangVersion>13.0</LangVersion>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+		<IsRoslynComponent>true</IsRoslynComponent>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<CompilerVisibleProperty Include="CompilerGeneratedFilesOutputPath" />
+	</ItemGroup>
+
+	<ItemGroup Label="Package References">
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" PrivateAssets="all" />
+		<PackageReference Include="NMF-Basics" Version="2.0.449" GeneratePathProperty="true" />
+		<PackageReference Include="NMF-Transformations" Version="2.0.439" GeneratePathProperty="true" />
+		<PackageReference Include="NMF-Repository" Version="2.0.449" GeneratePathProperty="true" PrivateAssets="all" />
+		<PackageReference Include="NMF-MetaTransformation" Version="2.0.439" GeneratePathProperty="true" PrivateAssets="all" />
+		<PackageReference Include="System.CodeDom" Version="9.0.6" GeneratePathProperty="true" PrivateAssets="all" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\CTMLib\CTMLib.csproj" />
+	</ItemGroup>
+
+	<PropertyGroup>
+		<GetTargetPathDependsOn>$(GetTargetPathDependsOn);GetDependencyTargetPaths</GetTargetPathDependsOn>
+	</PropertyGroup>
+
+	<Target Name="GetDependencyTargetPaths" AfterTargets="ResolvePackageDependenciesForBuild">
+		<ItemGroup>
+			<TargetPathWithTargetPlatformMoniker Include="@(ResolvedCompileFileDefinitions)" IncludeRuntimeDependency="false" />
+		</ItemGroup>
+	</Target>
+
+</Project>

@@ -17,7 +17,11 @@ namespace CTMGenerator {
             = ImmutableArray.Create(
                 CTMDiagnostics.InterfaceNameDescriptor, 
                 CTMDiagnostics.ModelInterfaceNoModelMetadataDescriptor, 
-                CTMDiagnostics.AssemblyMetadataNoNamespaceDescriptor);
+                CTMDiagnostics.AssemblyMetadataNoNamespaceDescriptor,
+                CTMDiagnostics.RequiredModelInterfaceKeyword,
+                CTMDiagnostics.IListExpressionInstead,
+                CTMDiagnostics.ISetExpressionInstead,
+                CTMDiagnostics.IOrderedSetExpressionInstead);
 
 
 
@@ -26,6 +30,7 @@ namespace CTMGenerator {
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
 
             context.RegisterSymbolAction(AnalyzeNamedType, SymbolKind.NamedType);
+            context.RegisterSymbolAction(AnalyzeField, SymbolKind.Field);
             context.RegisterSyntaxNodeAction(AnalyzeAssembly, SyntaxKind.AttributeList);
         }
 
@@ -81,10 +86,13 @@ namespace CTMGenerator {
         private static void AnalyzeNamedType(SymbolAnalysisContext context) {
             Diagnostic diagnostic;
 
+            if (!IsModelInterface(context.Symbol)) {
+                return;
+            }
+
             INamedTypeSymbol interfaceType = (INamedTypeSymbol) context.Symbol;
             foreach (SyntaxReference declaringSyntaxReference in interfaceType.DeclaringSyntaxReferences) {
-                if (declaringSyntaxReference.GetSyntax() is not InterfaceDeclarationSyntax interfaceDeclaration
-                    || Utilities.GetAttributeByName(interfaceType.GetAttributes(), nameof(ModelInterface)) == null) {
+                if (declaringSyntaxReference.GetSyntax() is not InterfaceDeclarationSyntax interfaceDeclaration) {
                     continue;
                 }
 
@@ -112,8 +120,12 @@ namespace CTMGenerator {
                             interfaceDeclaration.GetLocation(),
                             [namespaceName, interfaceName]);
                 context.ReportDiagnostic(diagnostic);
-                }
             }
+        }
+
+        public static bool IsModelInterface(ISymbol type) {
+            return Utilities.GetAttributeByName(type.GetAttributes(), nameof(ModelInterface)) != null;
+        }
 
         private static bool IsValidInterfaceName(string interfaceName) {
             return interfaceName.StartsWith("I") && interfaceName.Length >= 2 && char.IsUpper(interfaceName[1]);

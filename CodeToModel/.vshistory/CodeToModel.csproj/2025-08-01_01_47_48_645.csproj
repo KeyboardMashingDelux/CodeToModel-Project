@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net9.0</TargetFramework>
+		<RollForward>LatestMajor</RollForward>
+		<LangVersion>13.0</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+		<CompilerGeneratedFilesOutputPath>Generated</CompilerGeneratedFilesOutputPath>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile Remove="Generated\CTMGenerator\CTMGenerator.ModelGenerator\*" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="NMF-Basics" Version="2.0.439" />
+		<PackageReference Include="NMF-Transformations" Version="2.0.439" />
+		<PackageReference Include="NMF-Repository" Version="2.0.449" GeneratePathProperty="true" PrivateAssets="all" />
+		<PackageReference Include="NMF-MetaTransformation" Version="2.0.439" GeneratePathProperty="true" PrivateAssets="all" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\CTMGenerator\CTMGenerator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+		<ProjectReference Include="..\CTMLib\CTMLib.csproj" />
+		<ProjectReference Include="..\CTMAnalyzer\CTMAnalyzer.csproj" />
+		<ProjectReference Include="..\CTMCodeFixes\CTMCodeFixes.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Include="Generated\CTMGenerator\CTMGenerator.ModelGenerator\*" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Generated\CTMGenerator\CTMGenerator.ModelGenerator\" />
+	</ItemGroup>
+
+</Project>

@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<RollForward>LatestMajor</RollForward>
+		<LangVersion>13.0</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<IsPackable>false</IsPackable>
+		<IsTestProject>true</IsTestProject>
+	</PropertyGroup>
+
+	<ItemGroup>
+		
+	</ItemGroup>
+
+	<!--<ItemGroup>
+		<PackageReference Include="NMF-Basics" Version="2.0.439" />
+	</ItemGroup>-->
+
+	<ItemGroup>
+		<ProjectReference Include="..\CTMGenerator\CTMGenerator.csproj" OutputItemType="Analyzer"/>
+		<ProjectReference Include="..\CTMLib\CTMLib.csproj" />
+		<ProjectReference Include="..\CTMCodeFixes\CTMCodeFixes.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Using Include="Xunit" />
+	</ItemGroup>
+
+</Project>
