@@ -1,6 +1,6 @@
 ﻿namespace CTMLib {
 
-    [AttributeUsage(AttributeTargets.Interface)]
+    [AttributeUsage(AttributeTargets.Interface, AllowMultiple = false)]
     public class ModelInterface : Attribute {
     }
 }

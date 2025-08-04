@@ -1,6 +1,6 @@
 ﻿namespace CTMLib {
 
-    [AttributeUsage(AttributeTargets.Method)]
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public class IsContainment : Attribute {
     }
 }

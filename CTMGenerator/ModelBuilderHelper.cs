@@ -315,6 +315,21 @@ namespace CTMGenerator {
             return ca?[1].Value?.ToString();
         }
 
+        public static IdentifierScope? GetIdentifierScope(ImmutableArray<AttributeData> propertyAttributes) {
+            var attribute = Utilities.GetAttributeByName(propertyAttributes, nameof(IdentifierScopeAttribute));
+            var ca = attribute?.ConstructorArguments;
+            return (IdentifierScope?) ca?[0].Value;
+        }
+
+        public static bool ContainsType(CodeTypeReferenceCollection typeReferences, string typeName) {
+            foreach (CodeTypeReference reference in typeReferences) {
+                if (reference.BaseType.Equals(typeName)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         /// <summary>
         /// Extracts the Ambient Namespace of a Namespace. 
         /// </summary>

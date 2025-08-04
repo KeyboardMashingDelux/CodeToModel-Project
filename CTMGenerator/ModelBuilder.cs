@@ -8,6 +8,7 @@ using CTMLib;
 using NMF.Utilities;
 using System.Diagnostics;
 using NMF.Expressions.Linq;
+using NMF.Models;
 
 
 namespace CTMGenerator {
@@ -81,11 +82,13 @@ namespace CTMGenerator {
 
             var instanceOfClass = element.BaseType != null ? new Class() { Name = element.BaseType.Name } : null;
 
+            IdentifierScope? identifierScope = ModelBuilderHelper.GetIdentifierScope(elementAttributes);
+
             var elementClass = new Class {
                 Name = element.Name.Substring(1),
                 IsAbstract = isAbstract != null,
-                IdentifierScope = IdentifierScope.Local, // Per Attribut lösen
-                Identifier = null, // Attribut welches IdentifierScope beinhaltet
+                IdentifierScope = identifierScope != null ? (IdentifierScope) identifierScope : IdentifierScope.Local, // TODO Standardwert?
+                Identifier = null, // Attribut welches IdentifierScope beinhaltet TODO Wie bestimmen?
                 InstanceOf = instanceOfClass,
                 Namespace = Namespace,
                 Parent = null,
@@ -147,8 +150,8 @@ namespace CTMGenerator {
 
             // Creates compile unit from Namespace data (Code model - Keine Datei - Sprachunabhängig
             var compileUnit = MetaFacade.CreateCode(Namespace, AmbientName);
-            // Interfaces need to be removed!
-            compileUnit = RemoveInterfaces(compileUnit);
+            // Interfaces need to be removed or edited
+            compileUnit = AdaptInterfaces(compileUnit);
 
             StringWriter writer = new();
             CodeGeneratorOptions options = new() {
@@ -163,18 +166,25 @@ namespace CTMGenerator {
             //return "";
         }
 
-        private CodeCompileUnit RemoveInterfaces(CodeCompileUnit ccu) {
-            // TODO Partial = Schnittstellen inhalt leeren
-            // TODO IModelElement = Schnitstelle entfernen
-            // TODO Beides = Eins von beidem ist eigentlich egal
-            // TODO Able to improve?
+        private CodeCompileUnit AdaptInterfaces(CodeCompileUnit ccu) {
             CodeNamespaceCollection nsCollection = ccu.Namespaces;
             foreach (CodeNamespace cn in nsCollection) {
-                CodeTypeDeclarationCollection types = cn.Types;
 
+                CodeTypeDeclarationCollection types = cn.Types;
                 for (int i = types.Count - 1; i >= 0; i--) {
-                    if (types[i].IsInterface) {
-                        types.RemoveAt(i);
+
+                    CodeTypeDeclaration currentType = types[i];
+                    if (currentType.IsInterface) {
+                        if (ModelBuilderHelper.ContainsType(currentType.BaseTypes, typeof(IModelElement).FullName)) {
+                            types.RemoveAt(i);
+                        }
+                        else if (currentType.IsPartial) {
+                            currentType.Members.Clear();
+                        }
+                        else {
+                            string comment = $"TODO Interface should be partial or implement {nameof(IModelElement)}!";
+                            currentType.Comments.Add(new CodeCommentStatement(comment));
+                        }
                     }
                 }
             }
