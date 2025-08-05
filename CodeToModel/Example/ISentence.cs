@@ -13,7 +13,7 @@ namespace CodeToModel.Example {
 
     // Interface muss entweder partial sein oder IModelElement implementieren
     [ModelInterface]
-    public interface ISentence : IModelElement {
+    public partial interface ISentence {
 
         // TODO Wenn Fehler in generierter Klasse IListExpression anstatt IList erfordern -> Analyzer 
         // TODO Am besten gleich CodeFix
@@ -27,6 +27,6 @@ namespace CodeToModel.Example {
 
         public IWord FirstWord { get; }
 
-        public int WordCount { get; }
+        public int? WordCount { get; }
     }
 }

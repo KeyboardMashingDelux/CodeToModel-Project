@@ -12,9 +12,9 @@
 		<IsPackable>false</IsPackable>
 	</PropertyGroup>
 
-	<ItemGroup>
+	<!--<ItemGroup>
 		<Compile Remove="Generated\CTMGenerator\CTMGenerator.ModelGenerator\*" />
-	</ItemGroup>
+	</ItemGroup>-->
 
 	<ItemGroup>
 		<PackageReference Include="NMF-Basics" Version="2.0.439" />

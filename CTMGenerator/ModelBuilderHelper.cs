@@ -13,6 +13,8 @@ using System.CodeDom;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Xml.Linq;
 using static NMF.Models.Meta.Meta2ClassesTransformation;
 using Attribute = NMF.Models.Meta.Attribute;
@@ -59,92 +61,94 @@ namespace CTMGenerator {
         }
 
         public static (List<IReference> references, List<IAttribute> attributes, Dictionary<IReference, string> refTypeInfos) ConvertProperties(List<IPropertySymbol> properties, Compilation compilation) {
+
+            //Debugger.Launch();
+
             List<IReference> references = [];
             List<IAttribute> attributes = [];
             Dictionary<string, IReference> opposites = [];
             Dictionary<IReference, string> refTypeInfos = [];
-            foreach (var property in properties) {
-                var specialType = property.Type.SpecialType;
+            foreach (IPropertySymbol property in properties) {
+                INamedTypeSymbol type = (INamedTypeSymbol) property.Type;
+                bool isNullableType = type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
+
+
+                // TODO CreateAttribute & CreateReference methoden erstellen
+                // Bei Nullable das typeArgument nutzen?
+
 
                 // TODO genrisch und collectionexpression überspringen
-                //if (type.isGeneric && type.IsCollectionExpression) {
-                //    continue;
-                //}
+                // -> Funktionier weil IListExpression nicht generisch und das ist gewünscht anstatt IList?
+                if (//(type.IsGenericType && !isNullableType) ||
+                    (type.BaseType != null && type.BaseType.Name.Equals(nameof(ICollectionExpression)))) {
+                        continue;
+                }
 
-                // TODO This is not the way
-                // TODO Für Enumerationen
-                //PrimitiveType ptype = new PrimitiveType() {
-                //    Name = typeof(bool).Name,
-                //    SystemType = typeof(bool).FullName
-                //};
-                //MappedType.FromType(ptype).SystemType = typeof(bool);
+                // TODO Was wenn meherere TypeArguments z.B. eigene Dictionary implementation
+                ITypeSymbol typeArgument = GetTypeArgument(type) ?? type;
+                bool isCollection = !SymbolEqualityComparer.Default.Equals(type, typeArgument) && !isNullableType;
+                SpecialType typeArgumentSpecialType = typeArgument.SpecialType;
+                ImmutableArray<AttributeData> propertyAttributes = property.GetAttributes();
+                ITypeSymbol checkType = isNullableType ? typeArgument : type;
+                SpecialType specialType = checkType.SpecialType;
 
+                int lowerBound = GetLowerBound(propertyAttributes, IsNullable(type));
+                int upperBound = GetUpperBound(propertyAttributes, isCollection);
 
-                // Attribute: TypeArgument (wenn type generisch) / Type ist primitiv
+                // TODO Bestimmen ob es nur Get / Set gibt?
 
-                // TODO Check muss auf Type Argument stattfinden, wenn vorhanden
-                if (IsPrimitive(specialType)) {
-                    ImmutableArray<AttributeData> propertyAttributes = property.GetAttributes();
+                // Attribut
+                if (isCollection ? IsPrimitive(typeArgumentSpecialType) : IsPrimitive(specialType)) {
                     Attribute attribute = new() {
                         Name = property.Name,
-                        IsUnique = false, 
-                        IsOrdered = false,
-                        LowerBound = GetLowerBound(propertyAttributes),
-                        UpperBound = GetUpperBound(propertyAttributes, false),
-                        Type = GetPrimitiveType(specialType)
+                        IsUnique = isCollection && IsUnique(checkType),
+                        IsOrdered = isCollection && IsOrdered(checkType),
+                        LowerBound = GetLowerBound(propertyAttributes, IsNullable(type)),
+                        UpperBound = GetUpperBound(propertyAttributes, isCollection),
+                        Type = GetPrimitiveType(isCollection ? typeArgumentSpecialType : specialType),
                     };
 
                     attributes.Add(attribute);
                 }
+                // Reference
                 else {
-                    ImmutableArray<AttributeData> propertyAttributes = property.GetAttributes();
-                    ITypeSymbol type = property.Type;
-                    ITypeSymbol? typeArgument = GetTypeArgument(type);
+                    bool isUnique = IsUnique(checkType);
+                    bool isOrdered = IsOrdered(checkType);
 
                     // TODO Wenn generisch nach Expression gucken, wenn nicht generisch dann Fehler
-                    //if (IsUnique || IsOrdered && !type.isGeneric) {
+                    //if ((isUnique || isOrdered) && !isNullableType && checkType is INamedTypeSymbol namedType && namedType.IsGenericType) {
                     //    continue;
                     //}
 
                     Reference reference = new() {
                         Name = property.Name,
-                        IsUnique = IsUnique(type, compilation),
-                        IsOrdered = IsOrdered(type, compilation),
-                        LowerBound = GetLowerBound(propertyAttributes),
-                        UpperBound = GetUpperBound(propertyAttributes, typeArgument != null), // If typeArgument not null it means some sort of collection
+                        IsUnique = isUnique,
+                        IsOrdered = isOrdered,
+                        LowerBound = lowerBound,
+                        UpperBound = upperBound,
                         IsContainment = Utilities.GetAttributeByName(propertyAttributes, nameof(ContainmentAttribute)) != null
                     };
 
-                    if (typeArgument != null) {
-                        if (IsPrimitive(typeArgument.SpecialType)) {
-                            // Add primitive type
-                            reference.ReferenceType = new PrimitiveType() { SystemType = typeArgument.SpecialType.ToString()}.GetClass();
-                        }
-                        else {
-                            // Add none primitive
-                            refTypeInfos.Add(reference, typeArgument.Name.Substring(1));
-                        }
-                    }
-                    else {
-                        if (IsPrimitive(type.SpecialType)) {
-                            // Add primitive type
-                            reference.ReferenceType = new PrimitiveType() { SystemType = type.SpecialType.ToString() }.GetClass();
-                        }
-                        else {
-                            // Add none primitive
-                            refTypeInfos.Add(reference, type.Name.Substring(1));
-                        }
-                    }
+                    // TODO Assumes the ref is a interface - What if just a normal Object?
+                    refTypeInfos.Add(reference, (isCollection ? typeArgument : type).Name.Substring(1));
 
-                    references.Add(reference); 
+                    references.Add(reference);
 
-                    string? oppositeName = GetSecondString(propertyAttributes, nameof(OppositeAttribute)); 
+                    string? oppositeName = GetSecondString(propertyAttributes, nameof(OppositeAttribute));
                     if (oppositeName != null) {
                         opposites.Add(oppositeName, reference);
                     }
                 }
+
+
+                // TODO This is the way Für Enumerationen
+                //PrimitiveType ptype = new PrimitiveType() {
+                //    Name = typeof(bool).Name,
+                //    SystemType = typeof(bool).FullName
+                //};
             }
 
+            // TODO Kann opposite in anderem Interface sein?
             foreach (var opposite in opposites) {
                 string oppositeName = opposite.Key;
                 IReference thisRef = opposite.Value;
@@ -210,42 +214,18 @@ namespace CTMGenerator {
 
         public static ITypeSymbol? GetTypeArgument(ITypeSymbol type) {
             if (type is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.IsGenericType) {
-                var typeArgument = namedTypeSymbol.TypeArguments.FirstOrDefault();
-                if (typeArgument != null) {
-                    return typeArgument;
-                }
+                return namedTypeSymbol.TypeArguments.FirstOrDefault();
             }
 
             return null;
         }
 
-        public static bool IsType(ITypeSymbol type, INamedTypeSymbol isType) {
-            return SymbolEqualityComparer.Default.Equals(type, isType)
-                   || isType.AllInterfaces.Contains(type, SymbolEqualityComparer.Default);
+        public static bool IsOrdered(ITypeSymbol type) {
+            return type.Name.Equals(nameof(IListExpression<int>)) || type.Name.Equals(nameof(IOrderedSetExpression<int>));
         }
 
-        public static bool IsValidGeneric(ITypeSymbol type) {
-            return !(type is ICollectionExpression);
-        }
-
-        public static bool IsOrdered(ITypeSymbol type, Compilation compilation) {
-            INamedTypeSymbol? listExpressionSymbol = compilation.GetTypeByMetadataName(typeof(IListExpression<>).FullName);
-            INamedTypeSymbol? orderedSetExpressionSymbol = compilation.GetTypeByMetadataName(typeof(IOrderedSetExpression<>).FullName);
-
-            bool isIListExpression = listExpressionSymbol == null ? false : IsType(type, listExpressionSymbol);
-            bool isIOrderedSetExpression = orderedSetExpressionSymbol == null ? false : IsType(type, orderedSetExpressionSymbol);
-
-            return isIListExpression || isIOrderedSetExpression;
-        }
-
-        public static bool IsUnique(ITypeSymbol type, Compilation compilation) {
-            INamedTypeSymbol? setExpressionSymbol = compilation.GetTypeByMetadataName(typeof(ISetExpression<>).FullName);
-            INamedTypeSymbol? orderedSetExpressionSymbol = compilation.GetTypeByMetadataName(typeof(IOrderedSetExpression<>).FullName);
-
-            bool isSetExpressionSymbol = setExpressionSymbol == null ? false : IsType(type, setExpressionSymbol);
-            bool isIOrderedSetExpression = orderedSetExpressionSymbol == null ? false : IsType(type, orderedSetExpressionSymbol);
-
-            return isSetExpressionSymbol || isIOrderedSetExpression;
+        public static bool IsUnique(ITypeSymbol type) {
+            return type.Name.Equals(nameof(ISetExpression<int>)) || type.Name.Equals(nameof(IOrderedSetExpression<int>));
         }
 
         public static (List<IReference> references, List<IAttribute> attributes) ConvertMethods(List<IMethodSymbol> methods) {
@@ -290,11 +270,28 @@ namespace CTMGenerator {
             }
         }
 
-        // TODO 1 oder 0 (Nullable)
-        public static int GetLowerBound(ImmutableArray<AttributeData> propertyAttributes) {
+        public static bool IsNullable(ITypeSymbol type) {
+            if (type is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.IsGenericType) {
+                if (namedTypeSymbol.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T) {
+                    return true;
+                }
+
+                foreach (ITypeSymbol typeArgument in namedTypeSymbol.TypeArguments) {
+                    if (!(typeArgument.NullableAnnotation == NullableAnnotation.Annotated)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            else {
+                return type.NullableAnnotation == NullableAnnotation.Annotated;
+            }
+        }
+
+        public static int GetLowerBound(ImmutableArray<AttributeData> propertyAttributes, bool isNullable) {
             var attribute = Utilities.GetAttributeByName(propertyAttributes, nameof(LowerBoundAttribute));
             var ca = attribute?.ConstructorArguments;
-            return (int)(ca?[0].Value ?? 0);
+            return (int)(ca?[0].Value ?? (isNullable ? 0 : 1));
         }
 
         public static int GetUpperBound(ImmutableArray<AttributeData> propertyAttributes, bool isCollection) {
@@ -318,17 +315,18 @@ namespace CTMGenerator {
         public static IdentifierScope? GetIdentifierScope(ImmutableArray<AttributeData> propertyAttributes) {
             var attribute = Utilities.GetAttributeByName(propertyAttributes, nameof(IdentifierScopeAttribute));
             var ca = attribute?.ConstructorArguments;
-            return (IdentifierScope?) ca?[0].Value;
+            return (IdentifierScope?)ca?[0].Value;
         }
 
-        public static bool ContainsType(CodeTypeReferenceCollection typeReferences, string typeName) {
-            foreach (CodeTypeReference reference in typeReferences) {
-                if (reference.BaseType.Equals(typeName)) {
-                    return true;
-                }
-            }
-            return false;
-        }
+
+
+
+
+        /// #############################
+        /// ###         MISC          ###
+        /// #############################
+
+
 
         /// <summary>
         /// Extracts the Ambient Namespace of a Namespace. 
@@ -336,7 +334,8 @@ namespace CTMGenerator {
         /// <param name="namespaceName"></param>
         /// <returns>The ambient namespace or <code>null</code> if this process failed.</returns>
         public static string? GetAmbientNamespaceName(string? namespaceName) {
-            if (!string.IsNullOrEmpty(namespaceName)) return "CodeToModel";
+            if (!string.IsNullOrEmpty(namespaceName))
+                return "CodeToModel";
 
             if (namespaceName == null) {
                 return namespaceName;

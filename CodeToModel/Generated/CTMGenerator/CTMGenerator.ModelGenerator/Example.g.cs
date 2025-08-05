@@ -96,12 +96,11 @@ namespace CodeToModel.Example {
 		/// <summary>
 		/// The Words property
 		/// </summary>
-		[UpperBoundAttribute(64)]
 		[DesignerSerializationVisibilityAttribute(DesignerSerializationVisibility.Content)]
 		[CategoryAttribute("Sentence")]
 		[XmlAttributeAttribute(true)]
 		[ConstantAttribute()]
-		public ICollectionExpression<IWord> Words {
+		public IListExpression<IWord> Words {
 			get {
 				return this._words;
 			}
@@ -203,6 +202,14 @@ namespace CodeToModel.Example {
 		/// <param name="reference">The requested reference name</param>
 		/// <param name="index">The index of this reference</param>
 		protected override IModelElement GetModelElementForReference(string reference, int index) {
+			if ((reference == "WORDS")) {
+				if ((index < this.Words.Count)) {
+					return this.Words[index];
+				}
+				else {
+					return null;
+				}
+			}
 			if ((reference == "FIRSTWORD")) {
 				return this.FirstWord;
 			}
@@ -337,9 +344,7 @@ namespace CodeToModel.Example {
 			public override void Add(IModelElement item) {
 				IWord wordsCasted = item.As<IWord>();
 				if ((wordsCasted != null)) {
-					if ((this._parent.Words.Count < 64)) {
-						this._parent.Words.Add(wordsCasted);
-					}
+					this._parent.Words.Add(wordsCasted);
 				}
 				if ((this._parent.FirstWord == null)) {
 					IWord firstWordCasted = item.As<IWord>();

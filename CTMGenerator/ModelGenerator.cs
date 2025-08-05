@@ -173,67 +173,67 @@ namespace CTMGenerator {
 //            //context.AddSource($"{mb.name}.g.cs", mb.DoCreateCode());
 //        }
 
-        private static string GetInheritance(ITypeSymbol element) {
-            var interfaces = element.Interfaces;
-            List<string> inheritance = [];
-            foreach (var interfaceSymbol in interfaces) {
-                var interfaceAttributes = interfaceSymbol.GetAttributes();
-                if (interfaceAttributes.Any(a => Utilities.IsLibAttributeClass(a.AttributeClass, nameof(ModelInterface)))) {
-                    inheritance.Add(interfaceSymbol.Name.Substring(1));
-                }
-            }
+        //private static string GetInheritance(ITypeSymbol element) {
+        //    var interfaces = element.Interfaces;
+        //    List<string> inheritance = [];
+        //    foreach (var interfaceSymbol in interfaces) {
+        //        var interfaceAttributes = interfaceSymbol.GetAttributes();
+        //        if (interfaceAttributes.Any(a => Utilities.IsLibAttributeClass(a.AttributeClass, nameof(ModelInterface)))) {
+        //            inheritance.Add(interfaceSymbol.Name.Substring(1));
+        //        }
+        //    }
 
-            return String.Join(",", inheritance);
-        }
+        //    return String.Join(",", inheritance);
+        //}
 
-        private static (List<string> variables, List<string> methodes, List<string> events) GetClassMembers(ImmutableArray<ISymbol> members) {
-            List<string> variables = [];
-            List<string> methodes = [];
-            List<string> events = [];
+        //private static (List<string> variables, List<string> methodes, List<string> events) GetClassMembers(ImmutableArray<ISymbol> members) {
+        //    List<string> variables = [];
+        //    List<string> methodes = [];
+        //    List<string> events = [];
 
-            string visibility = "";
-            string type = "";
-            string memberName = "";
+        //    string visibility = "";
+        //    string type = "";
+        //    string memberName = "";
 
-            foreach (var member in members) {
-                switch (member) {
-                    case IPropertySymbol property:
-                        visibility = GetAccessibility(property.DeclaredAccessibility);
-                        type = property.Type.ToDisplayString();
-                        memberName = property.Name;
+        //    foreach (var member in members) {
+        //        switch (member) {
+        //            case IPropertySymbol property:
+        //                visibility = GetAccessibility(property.DeclaredAccessibility);
+        //                type = property.Type.ToDisplayString();
+        //                memberName = property.Name;
 
-                        variables.Add($"private {type} _{memberName};");
-                        // TODO has to check accessor with property.GetMethod; property.SetMethod;
-                        methodes.Add($"{visibility} {type} {memberName} {{ get {{ return this._{memberName}; }} }}");
-                        break;
+        //                variables.Add($"private {type} _{memberName};");
+        //                // TODO has to check accessor with property.GetMethod; property.SetMethod;
+        //                methodes.Add($"{visibility} {type} {memberName} {{ get {{ return this._{memberName}; }} }}");
+        //                break;
 
-                    case IMethodSymbol method when method.MethodKind == MethodKind.Ordinary:
-                        visibility = GetAccessibility(method.DeclaredAccessibility);
-                        type = method.ReturnType.ToDisplayString();
-                        memberName = method.Name;
+        //            case IMethodSymbol method when method.MethodKind == MethodKind.Ordinary:
+        //                visibility = GetAccessibility(method.DeclaredAccessibility);
+        //                type = method.ReturnType.ToDisplayString();
+        //                memberName = method.Name;
 
-                        methodes.Add($"{visibility} {type} {memberName} {{ }}");
-                        break;
+        //                methodes.Add($"{visibility} {type} {memberName} {{ }}");
+        //                break;
 
-                    case IEventSymbol eventMember:
-                        visibility = GetAccessibility(eventMember.DeclaredAccessibility);
-                        type = eventMember.Type.ToDisplayString();
-                        memberName = eventMember.Name;
+        //            case IEventSymbol eventMember:
+        //                visibility = GetAccessibility(eventMember.DeclaredAccessibility);
+        //                type = eventMember.Type.ToDisplayString();
+        //                memberName = eventMember.Name;
 
-                        events.Add($"{visibility} event {type} {memberName};");
-                        break;
+        //                events.Add($"{visibility} event {type} {memberName};");
+        //                break;
 
-                    // Skip accessors (get/set/add/remove)
-                    default:
-                        continue;
-                }
-            }
+        //            // Skip accessors (get/set/add/remove)
+        //            default:
+        //                continue;
+        //        }
+        //    }
 
-            return (variables, methodes, events);
-        }
+        //    return (variables, methodes, events);
+        //}
 
-        private static string GetAccessibility(Accessibility accessibility) {
-            return accessibility == Accessibility.NotApplicable ? "" : accessibility.ToString().ToLower();
-        }
+        //private static string GetAccessibility(Accessibility accessibility) {
+        //    return accessibility == Accessibility.NotApplicable ? "" : accessibility.ToString().ToLower();
+        //}
     }
 }

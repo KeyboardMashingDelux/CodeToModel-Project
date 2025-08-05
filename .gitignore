@@ -363,3 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 /CTMGenerator/.vshistory
 /CTMLib/.vshistory
+/CodeToModel/.vshistory/CodeToModel.csproj
+/CodeToModel/Example/.vshistory/ISentence.cs

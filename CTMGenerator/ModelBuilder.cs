@@ -9,14 +9,16 @@ using NMF.Utilities;
 using System.Diagnostics;
 using NMF.Expressions.Linq;
 using NMF.Models;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.CSharp;
 
 
 namespace CTMGenerator {
 
     public class ModelBuilder {
 
-        private ModelRepository? ModelRepository;
-        private INamespace? Namespace;
+        private ModelRepository ModelRepository;
+        private INamespace Namespace;
 
         private string FullName, Name, AmbientName, Prefix, Suffix;
         private string? OutputPath;
@@ -25,6 +27,8 @@ namespace CTMGenerator {
 
         /// Key = Ref Class name, Value Type to add reference to
         private Dictionary<IReference, string> RefTypeInfos;
+
+        private IDictionary<string, INamedTypeSymbol> NamespaceSymbols;
 
         public ModelBuilder(string? uri, string? filename, Compilation compilation) {
             GeneratorCompilation = compilation;
@@ -43,14 +47,13 @@ namespace CTMGenerator {
             };
 
             RefTypeInfos = [];
+            NamespaceSymbols = new Dictionary<string, INamedTypeSymbol>();
         }
 
         public void AddElement(ITypeSymbol element) {
             switch (element.TypeKind) {
                 case TypeKind.Interface:
                     AddClass(element);
-                    break;
-                case TypeKind.Array:
                     break;
                 default: return;
             }
@@ -99,7 +102,9 @@ namespace CTMGenerator {
             elementClass.References.AddRange(references);
             elementClass.Attributes.AddRange(attributes);
 
-            Namespace?.Types.Add(elementClass);
+            Namespace.Types.Add(elementClass);
+            // Since elemtn represents an interface it is guaranteed to be an INamedTypeSymbol
+            NamespaceSymbols.Add(element.Name, (INamedTypeSymbol) element);
         }
 
         /// <summary>
@@ -112,7 +117,7 @@ namespace CTMGenerator {
                 string refName = refInfo.Value;
                 IReference refAddType = refInfo.Key;
 
-                var possibleRefType = Namespace?.Types.Where((type) => type.Name.Equals(refName));
+                var possibleRefType = Namespace.Types.Where((type) => type.Name.Equals(refName));
                 if (possibleRefType == null || possibleRefType.Count() != 1) {
                     continue;
                 }
@@ -136,18 +141,10 @@ namespace CTMGenerator {
         /// </summary>
         /// <exception cref="InvalidOperationException"></exception>
         public void DoSave() {
-            if (ModelRepository == null) {
-                throw new InvalidOperationException("Did you forget to call ModelBuilder's initalize()?");
-            }
-
             ModelRepository.Save(Namespace, $"{OutputPath}/{Name}.{Suffix}", true);
         }
 
         public string DoCreateCode() {
-            if (ModelRepository == null) {
-                throw new InvalidOperationException();
-            }
-
             // Creates compile unit from Namespace data (Code model - Keine Datei - Sprachunabhängig
             var compileUnit = MetaFacade.CreateCode(Namespace, AmbientName);
             // Interfaces need to be removed or edited
@@ -175,14 +172,19 @@ namespace CTMGenerator {
 
                     CodeTypeDeclaration currentType = types[i];
                     if (currentType.IsInterface) {
-                        if (ModelBuilderHelper.ContainsType(currentType.BaseTypes, typeof(IModelElement).FullName)) {
+                        INamedTypeSymbol modelSymbol;
+                        if (!NamespaceSymbols.TryGetValue(currentType.Name, out modelSymbol)) {
+                            continue;
+                        }
+
+                        if (modelSymbol.AllInterfaces.Any(baseType => baseType.Name.Equals(nameof(IModelElement)))) {
                             types.RemoveAt(i);
                         }
-                        else if (currentType.IsPartial) {
+                        else if (IsSymbolPartial(modelSymbol)) {
                             currentType.Members.Clear();
                         }
                         else {
-                            string comment = $"TODO Interface should be partial or implement {nameof(IModelElement)}!";
+                            string comment = $"TODO Model Interface should be partial or implement {nameof(IModelElement)}!";
                             currentType.Comments.Add(new CodeCommentStatement(comment));
                         }
                     }
@@ -190,8 +192,16 @@ namespace CTMGenerator {
             }
 
             return ccu;
-        }      
+        }   
         
+        private bool IsSymbolPartial(INamedTypeSymbol symbol) {
+            return symbol.DeclaringSyntaxReferences
+                            .Select(syntaxRef => syntaxRef
+                            .GetSyntax())
+                            .OfType<InterfaceDeclarationSyntax>()
+                            .Any(declaration => declaration.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.PartialKeyword)));
+        }
+
         public string GetName() {
             return Name;
         }
