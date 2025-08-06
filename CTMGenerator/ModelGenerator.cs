@@ -94,7 +94,7 @@ namespace CTMGenerator {
             List<(string uri, string filename)> metadata = Utilities.GetMetadata(providerData.compilation.Assembly);
             Dictionary<string, ModelBuilder> models = [];
             foreach (var (uri, filename) in metadata) {
-                ModelBuilder mb = new(uri, filename, providerData.compilation);
+                ModelBuilder mb = new(uri, filename);
                 models.Add(mb.GetFullName(), mb);
             }
 

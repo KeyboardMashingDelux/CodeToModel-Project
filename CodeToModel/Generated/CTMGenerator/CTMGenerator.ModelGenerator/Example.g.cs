@@ -38,6 +38,10 @@ namespace CodeToModel.Example {
 		"Model/Example/Example.nmeta#//Sentence"))]
 	public partial class Sentence : ModelElement, ISentence, IModelElement {
 		
+		private static Lazy<IOperation> _printSentenceOperation = new Lazy<IOperation>(RetrievePrintSentenceOperation);
+		
+		private static Lazy<IOperation> _wordsAsURIOperation = new Lazy<IOperation>(RetrieveWordsAsURIOperation);
+		
 		/// <summary>
 		/// The backing field for the WordCount property
 		/// </summary>
@@ -96,6 +100,7 @@ namespace CodeToModel.Example {
 		/// <summary>
 		/// The Words property
 		/// </summary>
+		[UpperBoundAttribute(64)]
 		[DesignerSerializationVisibilityAttribute(DesignerSerializationVisibility.Content)]
 		[CategoryAttribute("Sentence")]
 		[XmlAttributeAttribute(true)]
@@ -152,6 +157,51 @@ namespace CodeToModel.Example {
 				}
 				return _classInstance;
 			}
+		}
+		
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="times"></param>
+		public void PrintSentence(int times) {
+			System.Action<ISentence, int> handler = OperationBroker.Instance.GetRegisteredDelegate<System.Action<ISentence, int>>(_printSentenceOperation);
+			if ((handler != null)) {
+			}
+			else {
+				throw new InvalidOperationException(("There is no implementation for method PrintSentence registered. Use the method br" +
+						"oker to register a method implementation."));
+			}
+			OperationCallEventArgs e = new OperationCallEventArgs(this, _printSentenceOperation.Value, times);
+			this.OnBubbledChange(BubbledChangeEventArgs.OperationCalling(this, _printSentenceOperation.Value, e));
+			handler.Invoke(this, times);
+			this.OnBubbledChange(BubbledChangeEventArgs.OperationCalled(this, _printSentenceOperation.Value, e));
+		}
+		
+		private static IOperation RetrievePrintSentenceOperation() {
+			return ClassInstance.LookupOperation("PrintSentence");
+		}
+		
+		/// <summary>
+		/// 
+		/// </summary>
+		public IWord WordsAsURI() {
+			System.Func<ISentence, IWord> handler = OperationBroker.Instance.GetRegisteredDelegate<System.Func<ISentence, IWord>>(_wordsAsURIOperation);
+			if ((handler != null)) {
+			}
+			else {
+				throw new InvalidOperationException(("There is no implementation for method WordsAsURI registered. Use the method broke" +
+						"r to register a method implementation."));
+			}
+			OperationCallEventArgs e = new OperationCallEventArgs(this, _wordsAsURIOperation.Value);
+			this.OnBubbledChange(BubbledChangeEventArgs.OperationCalling(this, _wordsAsURIOperation.Value, e));
+			IWord result = handler.Invoke(this);
+			e.Result = result;
+			this.OnBubbledChange(BubbledChangeEventArgs.OperationCalled(this, _wordsAsURIOperation.Value, e));
+			return result;
+		}
+		
+		private static IOperation RetrieveWordsAsURIOperation() {
+			return ClassInstance.LookupOperation("WordsAsURI");
 		}
 		
 		private static ITypedElement RetrieveWordCountAttribute() {
@@ -344,7 +394,9 @@ namespace CodeToModel.Example {
 			public override void Add(IModelElement item) {
 				IWord wordsCasted = item.As<IWord>();
 				if ((wordsCasted != null)) {
-					this._parent.Words.Add(wordsCasted);
+					if ((this._parent.Words.Count < 64)) {
+						this._parent.Words.Add(wordsCasted);
+					}
 				}
 				if ((this._parent.FirstWord == null)) {
 					IWord firstWordCasted = item.As<IWord>();
@@ -612,5 +664,15 @@ namespace CodeToModel.Example {
 				}
 			}
 		}
+	}
+	
+	/// <summary>
+	/// The public interface for Sentence
+	/// </summary>
+	[DefaultImplementationTypeAttribute(typeof(Sentence))]
+	[XmlDefaultImplementationTypeAttribute(typeof(Sentence))]
+	[ModelRepresentationClassAttribute(("file:///D:/Tools/Microsoft%20Visual%20Studio/Repos/Code%20First%20Modeling/CodeTo" +
+		"Model/Example/Example.nmeta#//Sentence"))]
+	public partial interface ISentence : IModelElement {
 	}
 }

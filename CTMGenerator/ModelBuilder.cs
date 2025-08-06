@@ -23,15 +23,11 @@ namespace CTMGenerator {
         private string FullName, Name, AmbientName, Prefix, Suffix;
         private string? OutputPath;
 
-        private Compilation GeneratorCompilation;
-
-        /// Key = Ref Class name, Value Type to add reference to
-        private Dictionary<IReference, string> RefTypeInfos;
+        private List<TypeHelper> RefTypeInfos;
 
         private IDictionary<string, INamedTypeSymbol> NamespaceSymbols;
 
-        public ModelBuilder(string? uri, string? filename, Compilation compilation) {
-            GeneratorCompilation = compilation;
+        public ModelBuilder(string? uri, string? filename) {
             Uri namespaceURI = new(uri ?? ModelBuilderHelper.DefaultUri);
             (FullName, Name, AmbientName, Prefix, Suffix) = ModelBuilderHelper.GetFilenameInfo(filename);
 
@@ -64,28 +60,12 @@ namespace CTMGenerator {
                 OutputPath = ModelBuilderHelper.GetSavePath(element);
             }
 
-            var isAbstract = Utilities.GetAttributeByName(element.GetAttributes(), nameof(IsAbstract));
-
-            var members = element.GetMembers();
-            var (properties, methodes, events) = ModelBuilderHelper.GetClassMembers(members);
-
-            //Debugger.Launch();
-
-            var (propertyReferences, propertyAttributes, refTypeInfos) = ModelBuilderHelper.ConvertProperties(properties, GeneratorCompilation);
-            RefTypeInfos.AddRange(refTypeInfos);
-            var (methodReferences, methodAttributes) = ModelBuilderHelper.ConvertMethods(methodes);
-            var (eventReferences, eventAttributes) = ModelBuilderHelper.ConvertEvents(events);
-
-            List<IReference> references = [];
-            references.AddRange(propertyReferences);
-            List<IAttribute> attributes = [];
-            attributes.AddRange(propertyAttributes);  
+            Debugger.Launch();
 
             var elementAttributes = element.GetAttributes();
-
-            var instanceOfClass = element.BaseType != null ? new Class() { Name = element.BaseType.Name } : null;
-
             IdentifierScope? identifierScope = ModelBuilderHelper.GetIdentifierScope(elementAttributes);
+            var isAbstract = Utilities.GetAttributeByName(element.GetAttributes(), nameof(IsAbstract));
+            var instanceOfClass = element.BaseType != null ? new Class() { Name = element.BaseType.Name } : null;
 
             var elementClass = new Class {
                 Name = element.Name.Substring(1),
@@ -99,8 +79,21 @@ namespace CTMGenerator {
                 Summary = ModelBuilderHelper.GetFirstString(elementAttributes, nameof(Summary))
             };
 
+            var members = element.GetMembers();
+            var (properties, methodes, events) = ModelBuilderHelper.GetClassMembers(members);
+
+            var (references, attributes) = ModelBuilderHelper.ConvertProperties(properties, out var refTypeInfos);
+            RefTypeInfos.AddRange(refTypeInfos);
+
+            List<Operation> operations = ModelBuilderHelper.ConvertMethods(methodes, out refTypeInfos);
+            RefTypeInfos.AddRange(refTypeInfos);
+
+            List<Event> eventsList = ModelBuilderHelper.ConvertEvents(events);
+
             elementClass.References.AddRange(references);
             elementClass.Attributes.AddRange(attributes);
+            elementClass.Operations.AddRange(operations);
+            elementClass.Events.AddRange(eventsList);
 
             Namespace.Types.Add(elementClass);
             // Since elemtn represents an interface it is guaranteed to be an INamedTypeSymbol
@@ -112,26 +105,9 @@ namespace CTMGenerator {
         /// This should be called before a call to DoSave() or DoCreateCode().
         /// </summary>
         public void CreateReferences() {
-            IList<IReference> refToRemove = [];
-            foreach (var refInfo in RefTypeInfos) {
-                string refName = refInfo.Value;
-                IReference refAddType = refInfo.Key;
-
-                var possibleRefType = Namespace.Types.Where((type) => type.Name.Equals(refName));
-                if (possibleRefType == null || possibleRefType.Count() != 1) {
-                    continue;
-                }
-
-                IType refType = possibleRefType.First();
-                if (refType is not null and IReferenceType) {
-                    refAddType.ReferenceType = (IReferenceType) refType;
-                    // Remove all successfull references to avoid duplicate reference creation
-                    refToRemove.Add(refAddType);
-                }
-            }
-
-            foreach (var toRemove in refToRemove) {
-                RefTypeInfos.Remove(toRemove);
+            for (int i = RefTypeInfos.Count - 1; i >= 0; i--) {
+                RefTypeInfos[i].SetType(Namespace.Types);
+                RefTypeInfos.RemoveAt(i);
             }
         }
 

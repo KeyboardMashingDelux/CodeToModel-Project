@@ -8,16 +8,20 @@ using NMF.Models;
 using NMF.Models.Meta;
 using NMF.Models.Repository;
 using NMF.Transformations.Core;
+using NMF.Utilities;
 using System;
 using System.CodeDom;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
+using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Xml.Linq;
 using static NMF.Models.Meta.Meta2ClassesTransformation;
 using Attribute = NMF.Models.Meta.Attribute;
+using IOperation = NMF.Models.Meta.IOperation;
+using Parameter = NMF.Models.Meta.Parameter;
 using SystemAttribute = System.Attribute;
 
 namespace CTMGenerator {
@@ -25,6 +29,12 @@ namespace CTMGenerator {
 
         public const string DefaultUri = "http://GENERATED.com";
         public const string DefaultFilename = "GENERATED.FORGOT.ASSEMBLY.INFO.nmeta";
+
+
+
+        /// #############################
+        /// ###   Member Conversion   ###
+        /// #############################
 
 
 
@@ -56,44 +66,31 @@ namespace CTMGenerator {
             return (properties, methodes, events);
         }
 
-        public static string GetAccessibility(Accessibility accessibility) {
-            return accessibility == Accessibility.NotApplicable ? "" : accessibility.ToString().ToLower();
-        }
-
-        public static (List<IReference> references, List<IAttribute> attributes, Dictionary<IReference, string> refTypeInfos) ConvertProperties(List<IPropertySymbol> properties, Compilation compilation) {
-
-            //Debugger.Launch();
+        public static (List<IReference> references, List<IAttribute> attributes)
+            ConvertProperties(List<IPropertySymbol> properties, out List<TypeHelper> refTypeInfos) {
 
             List<IReference> references = [];
             List<IAttribute> attributes = [];
+            refTypeInfos = [];
             Dictionary<string, IReference> opposites = [];
-            Dictionary<IReference, string> refTypeInfos = [];
             foreach (IPropertySymbol property in properties) {
-                INamedTypeSymbol type = (INamedTypeSymbol) property.Type;
+                INamedTypeSymbol type = (INamedTypeSymbol)property.Type;
                 bool isNullableType = type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
 
-
-                // TODO CreateAttribute & CreateReference methoden erstellen
-                // Bei Nullable das typeArgument nutzen?
-
-
                 // TODO genrisch und collectionexpression überspringen
-                // -> Funktionier weil IListExpression nicht generisch und das ist gewünscht anstatt IList?
                 if (//(type.IsGenericType && !isNullableType) ||
                     (type.BaseType != null && type.BaseType.Name.Equals(nameof(ICollectionExpression)))) {
-                        continue;
+                    continue;
                 }
 
                 // TODO Was wenn meherere TypeArguments z.B. eigene Dictionary implementation
                 ITypeSymbol typeArgument = GetTypeArgument(type) ?? type;
+                // TODO Werden Listen von Listen unterstützt? IListExpression<IListExpression<string>>?
                 bool isCollection = !SymbolEqualityComparer.Default.Equals(type, typeArgument) && !isNullableType;
                 SpecialType typeArgumentSpecialType = typeArgument.SpecialType;
                 ImmutableArray<AttributeData> propertyAttributes = property.GetAttributes();
                 ITypeSymbol checkType = isNullableType ? typeArgument : type;
                 SpecialType specialType = checkType.SpecialType;
-
-                int lowerBound = GetLowerBound(propertyAttributes, IsNullable(type));
-                int upperBound = GetUpperBound(propertyAttributes, isCollection);
 
                 // TODO Bestimmen ob es nur Get / Set gibt?
 
@@ -106,6 +103,8 @@ namespace CTMGenerator {
                         LowerBound = GetLowerBound(propertyAttributes, IsNullable(type)),
                         UpperBound = GetUpperBound(propertyAttributes, isCollection),
                         Type = GetPrimitiveType(isCollection ? typeArgumentSpecialType : specialType),
+                        Remarks = GetFirstString(propertyAttributes, nameof(Remarks)),
+                        Summary = GetFirstString(propertyAttributes, nameof(Summary))
                     };
 
                     attributes.Add(attribute);
@@ -124,13 +123,16 @@ namespace CTMGenerator {
                         Name = property.Name,
                         IsUnique = isUnique,
                         IsOrdered = isOrdered,
-                        LowerBound = lowerBound,
-                        UpperBound = upperBound,
-                        IsContainment = Utilities.GetAttributeByName(propertyAttributes, nameof(ContainmentAttribute)) != null
+                        LowerBound = GetLowerBound(propertyAttributes, IsNullable(type)),
+                        UpperBound = GetUpperBound(propertyAttributes, isCollection),
+                        IsContainment = Utilities.GetAttributeByName(propertyAttributes, nameof(ContainmentAttribute)) != null,
+                        Remarks = GetFirstString(propertyAttributes, nameof(Remarks)),
+                        Summary = GetFirstString(propertyAttributes, nameof(Summary))
                     };
+                    // TODO DeclaringType kann ignoriert werden? Oder nur bei override interessant?
 
                     // TODO Assumes the ref is a interface - What if just a normal Object?
-                    refTypeInfos.Add(reference, (isCollection ? typeArgument : type).Name.Substring(1));
+                    refTypeInfos.Add(new TypeHelper(reference, (isCollection ? typeArgument : type).Name.Substring(1)));
 
                     references.Add(reference);
 
@@ -159,9 +161,130 @@ namespace CTMGenerator {
                 }
             }
 
-            return (references, attributes, refTypeInfos);
+            return (references, attributes);
         }
 
+        public static List<Operation> ConvertMethods(List<IMethodSymbol> methods, out List<TypeHelper> refTypeInfos) {
+            List<Operation> operations = [];
+            refTypeInfos = [];
+
+            foreach (var method in methods) {
+                ITypeSymbol returnType = method.ReturnType;
+                bool isNullableType = returnType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
+                ImmutableArray<AttributeData> methodAttributes = method.GetAttributes();
+
+                ITypeSymbol typeArgument = GetTypeArgument(returnType) ?? returnType;
+                bool isCollection = !SymbolEqualityComparer.Default.Equals(returnType, typeArgument) && !isNullableType;
+                SpecialType typeArgumentSpecialType = typeArgument.SpecialType;
+                ITypeSymbol checkType = isNullableType ? typeArgument : returnType;
+                SpecialType specialType = checkType.SpecialType;
+
+                Operation operation = new() {
+                    Name = method.Name,
+                    IsUnique = IsUnique(returnType),
+                    IsOrdered = IsOrdered(returnType),
+                    LowerBound = GetLowerBound(methodAttributes, IsNullable(returnType)),
+                    UpperBound = GetUpperBound(methodAttributes, isCollection),
+                    Refines = null, // TODO
+                    Remarks = GetFirstString(methodAttributes, nameof(Remarks)),
+                    Summary = GetFirstString(methodAttributes, nameof(Summary)),
+                };
+
+                if (specialType != SpecialType.System_Void) {
+                    if (IsPrimitive(specialType)) {
+                        operation.Type = GetPrimitiveType(specialType);
+                    }
+                    else {
+                        refTypeInfos.Add(new TypeHelper(operation, checkType.Name));
+                    }
+                }
+
+                ConvertParameters(method.Parameters, operation);
+
+                operations.Add(operation);
+            }
+
+            return operations;
+        }
+
+        public static List<IParameter> ConvertParameters(ImmutableArray<IParameterSymbol> parameterSymbols, IOperation operation) {
+            List<IParameter> parameters = [];
+
+
+
+            foreach (IParameterSymbol parameterSymbol in parameterSymbols) {
+                if (parameterSymbol.IsThis) {
+                    continue;
+                }
+
+                ITypeSymbol type = parameterSymbol.Type;
+                ImmutableArray<AttributeData> parameterAttributes = parameterSymbol.GetAttributes();
+                bool isNullableType = type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
+
+                ITypeSymbol typeArgument = GetTypeArgument(type) ?? type;
+                bool isCollection = !isNullableType && !SymbolEqualityComparer.Default.Equals(type, typeArgument);
+                ITypeSymbol checkType = isNullableType ? typeArgument : type;
+
+                Parameter parameter = new() {
+                    Name = parameterSymbol.Name,
+                    Direction = GetDirection(parameterSymbol.RefKind),
+                    IsUnique = IsUnique(type),
+                    IsOrdered = IsOrdered(type),
+                    LowerBound = GetLowerBound(parameterAttributes, IsNullable(type)),
+                    UpperBound = GetUpperBound(parameterAttributes, isCollection),
+                    Operation = operation,
+                    Remarks = GetFirstString(parameterAttributes, nameof(Remarks)),
+                    Summary = GetFirstString(parameterAttributes, nameof(Summary))
+                };
+
+                if (IsPrimitive(checkType.SpecialType)) {
+                    parameter.Type = GetPrimitiveType(checkType.SpecialType);
+                }
+
+                parameters.Add(parameter);
+            }
+
+            return parameters;
+        }
+
+        public static List<Event> ConvertEvents(List<IEventSymbol> eventSymbols) {
+            List<Event> events = [];
+
+            foreach (var eventSymbol in eventSymbols) {
+                ImmutableArray<AttributeData> eventAttributes = eventSymbol.GetAttributes();
+
+                ITypeSymbol type = eventSymbol.Type;
+                bool isNullableType = type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
+
+                ITypeSymbol typeArgument = GetTypeArgument(type) ?? type;
+                ITypeSymbol checkType = isNullableType ? typeArgument : type;
+
+                Event @event = new() {
+                    Name = eventSymbol.Name,
+                    Type = new DataType() { Name = type.Name }, //TODO Wie?
+                    Remarks = GetFirstString(eventAttributes, nameof(Remarks)),
+                    Summary = GetFirstString(eventAttributes, nameof(Summary))
+                };
+
+                events.Add(@event);
+            }
+
+            return events;
+        }
+
+
+
+
+
+        /// #############################
+        /// ###   Primitive Creation  ###
+        /// #############################
+
+
+
+        /// <summary>
+        /// Gets the primitive type by the special type.
+        /// </summary>
         public static IType? GetPrimitiveType(SpecialType specialType) {
             switch (specialType) {
                 case SpecialType.System_Boolean:
@@ -197,7 +320,9 @@ namespace CTMGenerator {
             }
         }
 
-
+        /// <summary>
+        /// Contains the NMF friendly aliases of some primitive types.
+        /// </summary>
         private static readonly Dictionary<System.Type, string> Aliases = new() {
             { typeof(short), "Short" },
             { typeof(int), "Integer" },
@@ -205,6 +330,10 @@ namespace CTMGenerator {
             { typeof(float), "Float" },
         };
 
+        /// <summary>
+        /// Resolves the primitive type from the <see cref="MetaRepository"/>. 
+        /// </summary>
+        /// <typeparam name="T">The primitve type to resolve.</typeparam>
         public static IPrimitiveType ResolvePrimitve<T>() {
             Aliases.TryGetValue(typeof(T), out var primitiveName);
             primitiveName ??= typeof(T).Name;
@@ -212,6 +341,19 @@ namespace CTMGenerator {
             return ((IPrimitiveType)(MetaRepository.Instance.Resolve($"http://nmf.codeplex.com/nmeta/#//{primitiveName}")));
         }
 
+
+
+
+
+        /// #############################
+        /// ###   Conversion Helper   ###
+        /// #############################
+
+
+
+        /// <summary>
+        /// Retrives the first type argument of the given type.
+        /// </summary>
         public static ITypeSymbol? GetTypeArgument(ITypeSymbol type) {
             if (type is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.IsGenericType) {
                 return namedTypeSymbol.TypeArguments.FirstOrDefault();
@@ -220,32 +362,27 @@ namespace CTMGenerator {
             return null;
         }
 
-        public static bool IsOrdered(ITypeSymbol type) {
-            return type.Name.Equals(nameof(IListExpression<int>)) || type.Name.Equals(nameof(IOrderedSetExpression<int>));
-        }
-
-        public static bool IsUnique(ITypeSymbol type) {
-            return type.Name.Equals(nameof(ISetExpression<int>)) || type.Name.Equals(nameof(IOrderedSetExpression<int>));
-        }
-
-        public static (List<IReference> references, List<IAttribute> attributes) ConvertMethods(List<IMethodSymbol> methods) {
-            List<IReference> references = [];
-            List<IAttribute> attributes = [];
-            foreach (var method in methods) {
-
+        /// <summary>
+        /// Gets the parameter direction.
+        /// </summary>
+        public static Direction GetDirection(RefKind refKind) {
+            switch (refKind) {
+                case RefKind.In:
+                case RefKind.RefReadOnlyParameter:
+                case RefKind.None:
+                    return Direction.In;
+                case RefKind.Out:
+                    return Direction.Out;
+                case RefKind.Ref:
+                    return Direction.InOut;
+                default:
+                    return Direction.In;
             }
-            return (references, attributes);
         }
 
-        public static (List<IReference> references, List<IAttribute> attributes) ConvertEvents(List<IEventSymbol> events) {
-            List<IReference> references = [];
-            List<IAttribute> attributes = [];
-            foreach (var eventSymbol in events) {
-
-            }
-            return (references, attributes);
-        }
-
+        /// <summary>
+        /// Determines if the given special type is primitive.
+        /// </summary>
         public static bool IsPrimitive(SpecialType specialType) {
             switch (specialType) {
                 case SpecialType.System_Boolean:
@@ -270,6 +407,23 @@ namespace CTMGenerator {
             }
         }
 
+        /// <summary>
+        /// Determines if the given type is ordered by NMF standards.
+        /// </summary>
+        public static bool IsOrdered(ITypeSymbol type) {
+            return type.Name.Equals(nameof(IListExpression<int>)) || type.Name.Equals(nameof(IOrderedSetExpression<int>));
+        }
+
+        /// <summary>
+        /// Determines if the given type is unique by NMF standards.
+        /// </summary>
+        public static bool IsUnique(ITypeSymbol type) {
+            return type.Name.Equals(nameof(ISetExpression<int>)) || type.Name.Equals(nameof(IOrderedSetExpression<int>));
+        }
+
+        /// <summary>
+        /// Checks if the given type is nullable.
+        /// </summary>
         public static bool IsNullable(ITypeSymbol type) {
             if (type is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.IsGenericType) {
                 if (namedTypeSymbol.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T) {
@@ -288,32 +442,56 @@ namespace CTMGenerator {
             }
         }
 
-        public static int GetLowerBound(ImmutableArray<AttributeData> propertyAttributes, bool isNullable) {
-            var attribute = Utilities.GetAttributeByName(propertyAttributes, nameof(LowerBoundAttribute));
+        /// <summary>
+        /// Retrieves the value of the <see cref="LowerBoundAttribute"/>.
+        /// </summary>
+        /// <param name="isNullable">Whether or not the type the attributes belong to is nullable.</param>
+        public static int GetLowerBound(ImmutableArray<AttributeData> attributes, bool isNullable) {
+            var attribute = Utilities.GetAttributeByName(attributes, nameof(LowerBoundAttribute));
             var ca = attribute?.ConstructorArguments;
             return (int)(ca?[0].Value ?? (isNullable ? 0 : 1));
         }
 
-        public static int GetUpperBound(ImmutableArray<AttributeData> propertyAttributes, bool isCollection) {
-            var attribute = Utilities.GetAttributeByName(propertyAttributes, nameof(UpperBoundAttribute));
+        /// <summary>
+        /// Retrieves the value of the <see cref="UpperBoundAttribute"/>.
+        /// </summary>
+        /// <param name="isCollection">Whether or not the type the attributes belong to is a collection.</param>
+        public static int GetUpperBound(ImmutableArray<AttributeData> attributes, bool isCollection) {
+            var attribute = Utilities.GetAttributeByName(attributes, nameof(UpperBoundAttribute));
             var ca = attribute?.ConstructorArguments;
             return (int)(ca?[0].Value ?? (isCollection ? -1 : 1));
         }
 
-        public static string? GetFirstString(ImmutableArray<AttributeData> propertyAttributes, string attributeName) {
-            var attribute = Utilities.GetAttributeByName(propertyAttributes, attributeName);
+        /// <summary>
+        /// Retrievs the attribute from the given list by name.
+        /// </summary>
+        /// <param name="index">Represents the strings constructor index</param>
+        public static string? GetAttributeString(ImmutableArray<AttributeData> attributes, string attributeName, int index) {
+            var attribute = Utilities.GetAttributeByName(attributes, attributeName);
             var ca = attribute?.ConstructorArguments;
-            return ca?[0].Value?.ToString();
+            return ca?[index].Value?.ToString();
         }
 
-        public static string? GetSecondString(ImmutableArray<AttributeData> propertyAttributes, string attributeName) {
-            var attribute = Utilities.GetAttributeByName(propertyAttributes, attributeName);
-            var ca = attribute?.ConstructorArguments;
-            return ca?[1].Value?.ToString();
+        /// <summary>
+        /// Helper method, calls <see cref="GetAttributeString"/> with index 0.
+        /// </summary>
+        public static string? GetFirstString(ImmutableArray<AttributeData> attributes, string attributeName) {
+            return GetAttributeString(attributes, attributeName, 0);
         }
 
-        public static IdentifierScope? GetIdentifierScope(ImmutableArray<AttributeData> propertyAttributes) {
-            var attribute = Utilities.GetAttributeByName(propertyAttributes, nameof(IdentifierScopeAttribute));
+        /// <summary>
+        /// Helper method, calls <see cref="GetAttributeString"/> with index 1.
+        /// </summary>
+        public static string? GetSecondString(ImmutableArray<AttributeData> attributes, string attributeName) {
+            return GetAttributeString(attributes, attributeName, 1);
+        }
+
+        /// <summary>
+        /// Retrieves the <see cref="IdentifierScope"/> of the <see cref="IdentifierScopeAttribute"/>.
+        /// </summary>
+        /// <returns><see cref="IdentifierScope"/> or <see langword="null"/> if this attribute does not exist</returns>
+        public static IdentifierScope? GetIdentifierScope(ImmutableArray<AttributeData> attributes) {
+            var attribute = Utilities.GetAttributeByName(attributes, nameof(IdentifierScopeAttribute));
             var ca = attribute?.ConstructorArguments;
             return (IdentifierScope?)ca?[0].Value;
         }
@@ -394,6 +572,10 @@ namespace CTMGenerator {
             }
 
             return Path.GetDirectoryName(path);
+        }
+
+        public static string GetAccessibility(Accessibility accessibility) {
+            return accessibility == Accessibility.NotApplicable ? "" : accessibility.ToString().ToLower();
         }
     }
 }
