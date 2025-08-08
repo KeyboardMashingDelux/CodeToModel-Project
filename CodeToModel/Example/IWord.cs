@@ -6,6 +6,6 @@ namespace CodeToModel.Example {
     [ModelInterface]
     public interface IWord : IModelElement {
 
-        public string Text { get; }
+        public string Text { get; set; }
     }
 }

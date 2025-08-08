@@ -30,8 +30,9 @@ namespace CodeToModel.Example {
 	
 	
 	/// <summary>
-	/// The default implementation of the Sentence class
+	/// TEST SUMMARY
 	/// </summary>
+	/// <remarks>TEST REMARK</remarks>
 	[XmlNamespaceAttribute("http://github.com/CodeToModel")]
 	[XmlNamespacePrefixAttribute("Sentence")]
 	[ModelRepresentationClassAttribute(("file:///D:/Tools/Microsoft%20Visual%20Studio/Repos/Code%20First%20Modeling/CodeTo" +
@@ -664,15 +665,5 @@ namespace CodeToModel.Example {
 				}
 			}
 		}
-	}
-	
-	/// <summary>
-	/// The public interface for Sentence
-	/// </summary>
-	[DefaultImplementationTypeAttribute(typeof(Sentence))]
-	[XmlDefaultImplementationTypeAttribute(typeof(Sentence))]
-	[ModelRepresentationClassAttribute(("file:///D:/Tools/Microsoft%20Visual%20Studio/Repos/Code%20First%20Modeling/CodeTo" +
-		"Model/Example/Example.nmeta#//Sentence"))]
-	public partial interface ISentence : IModelElement {
 	}
 }

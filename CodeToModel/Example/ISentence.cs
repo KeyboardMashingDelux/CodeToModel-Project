@@ -14,6 +14,8 @@ namespace CodeToModel.Example {
 
     // Interface muss entweder partial sein oder IModelElement implementieren
     [ModelInterface]
+    [Remarks("TEST REMARK")]
+    [Summary("TEST SUMMARY")]
     public partial interface ISentence {
 
         // TODO Wenn Fehler in generierter Klasse IListExpression anstatt IList erfordern -> Analyzer 
@@ -22,13 +24,18 @@ namespace CodeToModel.Example {
         [UpperBound(64)] 
         [LowerBound(0)]
         public IListExpression<IWord> Words { get; } 
-        // TODO Wenn IWord Enumeration wäre
+
+        // TODO Für Enumerationen:
         // TODO Bei bereits vorhandener = Primitiver Typ erzeugen
         // TODO Bei eigener als model element & Reference erzeugen -> Neues Enum Attribut ModelEnum
+        // -=> GEHT ABER NICHT ???
+        //public ISetExpression<SentenceTypes> SentenceTypes { get; set; }
 
-        public IWord FirstWord { get; }
+        //public SentenceTypes MainSentenceType { get; set; }
 
-        public int? WordCount { get; }
+        public IWord FirstWord { get; set; }
+
+        public int? WordCount { get; set; }
 
         public void PrintSentence(int times);
 

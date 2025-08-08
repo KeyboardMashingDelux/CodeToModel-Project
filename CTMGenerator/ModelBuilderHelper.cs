@@ -13,6 +13,7 @@ using System;
 using System.CodeDom;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
@@ -92,8 +93,6 @@ namespace CTMGenerator {
                 ITypeSymbol checkType = isNullableType ? typeArgument : type;
                 SpecialType specialType = checkType.SpecialType;
 
-                // TODO Bestimmen ob es nur Get / Set gibt?
-
                 // Attribut
                 if (isCollection ? IsPrimitive(typeArgumentSpecialType) : IsPrimitive(specialType)) {
                     Attribute attribute = new() {
@@ -131,8 +130,9 @@ namespace CTMGenerator {
                     };
                     // TODO DeclaringType kann ignoriert werden? Oder nur bei override interessant?
 
-                    // TODO Assumes the ref is a interface - What if just a normal Object?
-                    refTypeInfos.Add(new TypeHelper(reference, (isCollection ? typeArgument : type).Name.Substring(1)));
+                    // TODO Assumes the ref is a model interface - What if just a normal Object?
+                    string refName = (isCollection ? typeArgument : type).Name;
+                    refTypeInfos.Add(new TypeHelper(reference, refName.StartsWith("I") ? refName.Substring(1) : refName));
 
                     references.Add(reference);
 
@@ -272,6 +272,26 @@ namespace CTMGenerator {
             return events;
         }
 
+        public static List<ILiteral> ConvertLiterals(List<IFieldSymbol> literalSymbols, IEnumeration enumeration) {
+            List<ILiteral> literals = [];
+
+            foreach (var literalSymbol in literalSymbols) {
+                ImmutableArray<AttributeData> literalAttributes = literalSymbol.GetAttributes();
+
+                Literal literal = new() {
+                    Name = literalSymbol.Name,
+                    Enumeration = enumeration,
+                    Value = (int?) literalSymbol.ConstantValue,
+                    Remarks = GetFirstString(literalAttributes, nameof(Remarks)),
+                    Summary = GetFirstString(literalAttributes, nameof(Summary))
+                };
+
+                literals.Add(literal);
+            }
+
+            return literals;
+        }
+
 
 
 
@@ -282,9 +302,9 @@ namespace CTMGenerator {
 
 
 
-        /// <summary>
-        /// Gets the primitive type by the special type.
-        /// </summary>
+            /// <summary>
+            /// Gets the primitive type by the special type.
+            /// </summary>
         public static IType? GetPrimitiveType(SpecialType specialType) {
             switch (specialType) {
                 case SpecialType.System_Boolean:

@@ -38,52 +38,47 @@ namespace CTMGenerator {
         }
 
         private static bool IsModelPart(SyntaxNode syntaxNode, CancellationToken cancellationToken) {
-            if (syntaxNode is not AttributeSyntax attribute)
+            if (syntaxNode is not AttributeSyntax attribute) {
                 return false;
+            }
 
-            var name = ExtractName(attribute.Name);
+            string name = ExtractName(attribute.Name);
 
-            if (name != nameof(ModelInterface))
+            if (name is not nameof(ModelInterface) and not nameof(ModelEnum)) {
                 return false;
+            }
 
-            //Debugger.Launch();
-            Debug.WriteLine($"### {name} ###");
-
-
-            return attribute.Parent?.Parent is InterfaceDeclarationSyntax;
+            return attribute.Parent?.Parent is InterfaceDeclarationSyntax or EnumDeclarationSyntax;
         }
 
         /// <summary>
         /// Tries to extracts the name from a NameSyntax node.
         /// </summary>
-        private static string? ExtractName(NameSyntax? name) {
+        private static string ExtractName(NameSyntax name) {
             return name switch {
                 SimpleNameSyntax ins => ins.Identifier.Text,
                 QualifiedNameSyntax qns => qns.Right.Identifier.Text,
                 AliasQualifiedNameSyntax aqns => aqns.Name.Identifier.Text,
-                _ => name?.ToString()
+                _ => name.ToString()
             };
         }
 
         private static ITypeSymbol? GetModelParts(GeneratorSyntaxContext context, CancellationToken cancellationToken) {
-            var attributeSyntax = (AttributeSyntax)context.Node;
+            AttributeSyntax attributeSyntax = (AttributeSyntax)context.Node;
 
-            // "attribute.Parent" is "AttributeListSyntax"
-            // "attribute.Parent.Parent" is a C# fragment the attributes are applied to
-            if (attributeSyntax.Parent?.Parent is not InterfaceDeclarationSyntax interfaceDeclaration)
+            if (attributeSyntax.Parent?.Parent is not InterfaceDeclarationSyntax and not EnumDeclarationSyntax) {
                 return null;
+            }
 
-            // This is now the actual Symbol and not the node (as seen in the Syntax Visualiser)
-            var type = context.SemanticModel.GetDeclaredSymbol(interfaceDeclaration) as ITypeSymbol;
-
-            Debug.WriteLine($"+++ {type} +++");
+            ITypeSymbol? type = context.SemanticModel.GetDeclaredSymbol(attributeSyntax.Parent.Parent) as ITypeSymbol;
 
             return type is null || !IsFromCorrectLib(type) ? null : type;
         }
 
         private static bool IsFromCorrectLib(ISymbol type) {
             return type.GetAttributes()
-                       .Any(a => Utilities.IsLibAttributeClass(a.AttributeClass, nameof(ModelInterface)));
+                       .Any(a => Utilities.IsLibAttributeClass(a.AttributeClass, nameof(ModelInterface))
+                                 || Utilities.IsLibAttributeClass(a.AttributeClass, nameof(ModelEnum)));
         }
 
         private static void GenerateCode(SourceProductionContext context,
@@ -100,10 +95,10 @@ namespace CTMGenerator {
 
 
             foreach (var element in providerData.elements) {
-                if (element == null)
+                if (element == null) {
                     continue;
+                }
 
-                // TODO Warum "is not null here"?
                 string ns = element.ContainingNamespace.ToString();
 
                 // Ignore elements which don't have a matching assembly set namespace
@@ -114,7 +109,7 @@ namespace CTMGenerator {
                 models[ns].AddElement(element);
             }
 
-            foreach (var model in models.Values) {
+            foreach (ModelBuilder model in models.Values) {
                 model.CreateReferences();
                 model.DoSave();
                 context.AddSource($"{model.GetName()}.g.cs", model.DoCreateCode());

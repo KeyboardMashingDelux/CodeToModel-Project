@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <nmeta:Namespace xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Uri="http://github.com/CodeToModel" Prefix="Sentence" Name="Example" xmlns:xmi="http://www.omg.org/XMI" xmlns:nmeta="http://nmf.codeplex.com/nmeta/">
-  <Types xsi:type="nmeta:Class" IdentifierScope="Local" Name="Sentence">
+  <Types xsi:type="nmeta:Class" IdentifierScope="Local" Name="Sentence" Summary="TEST SUMMARY" Remarks="TEST REMARK">
     <Events Type="PropertyChangedEventHandler" Name="WordCountChanged" />
     <References ReferenceType="nmeta:Class #//Word" IsOrdered="true" UpperBound="64" Name="Words" />
     <References ReferenceType="nmeta:Class #//Word" LowerBound="1" Name="FirstWord" />
@@ -12,5 +12,10 @@
   </Types>
   <Types xsi:type="nmeta:Class" IdentifierScope="Local" Name="Word">
     <Attributes LowerBound="1" Type="nmeta:PrimitiveType http://nmf.codeplex.com/nmeta/#//String" Name="Text" />
+  </Types>
+  <Types xsi:type="nmeta:Enumeration" Name="SentenceTypes">
+    <Literals Value="0" Name="QUESTION" />
+    <Literals Value="1" Name="EXCLAMATION" />
+    <Literals Value="2" Name="STANDARD" />
   </Types>
 </nmeta:Namespace>

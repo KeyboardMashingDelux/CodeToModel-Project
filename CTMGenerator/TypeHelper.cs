@@ -57,12 +57,16 @@ namespace CTMGenerator {
             }
 
             IType? refType = GetRefType(types);
-            if (refType is not null and IReferenceType) {
+            // TODO Brauche Enum Referenz -> Enumeration aber keine Referenez SÄDILÖHDFÖLACJ
+            if (refType is not null) {
                 Reference.ReferenceType = (IReferenceType)refType;
                 return;
             }
 
             // TODO Not an option
+            // Bedeutet sollte keine Referenz sein?
+            // Aber bei erzeugung kann ja nicht bekannt sein ob Teil des Modells?
+            // Im nachhinein Referenz in Attribut umwandeln?
             Reference.ReferenceType = (IReferenceType)GetPrimitiveType();
         }
 

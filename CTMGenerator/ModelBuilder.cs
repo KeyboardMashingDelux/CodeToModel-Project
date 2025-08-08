@@ -11,6 +11,7 @@ using NMF.Expressions.Linq;
 using NMF.Models;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.CSharp;
+using System.Collections.Immutable;
 
 
 namespace CTMGenerator {
@@ -47,12 +48,43 @@ namespace CTMGenerator {
         }
 
         public void AddElement(ITypeSymbol element) {
+
+            //Debugger.Launch();
+
             switch (element.TypeKind) {
                 case TypeKind.Interface:
                     AddClass(element);
                     break;
+                case TypeKind.Enum:
+                    AddEnum(element);
+                    break;
                 default: return;
             }
+        }
+
+        private void AddEnum(ITypeSymbol element) {
+
+            ImmutableArray<AttributeData> elementAttributes = element.GetAttributes();
+
+            Enumeration enumeration = new() {
+                Name = element.Name,
+                Namespace = Namespace,
+                Remarks = ModelBuilderHelper.GetFirstString(elementAttributes, nameof(Remarks)),
+                Summary = ModelBuilderHelper.GetFirstString(elementAttributes, nameof(Summary))
+            };
+
+            List<IFieldSymbol> literalSymbols = element.GetMembers()
+                                                       .OfType<IFieldSymbol>()
+                                                       // Should be enoght since enums can only have literals
+                                                       .Where(f => !f.IsImplicitlyDeclared)
+                                                       .ToList();
+
+            List<ILiteral> literals = ModelBuilderHelper.ConvertLiterals(literalSymbols, enumeration);
+            //enumeration.Literals.AddRange(null);
+
+            //Namespace.Types.Add(enumeration); TODO Warum hier nicht benötigt?
+            // Since elemtn represents an enum it is guaranteed to be an INamedTypeSymbol
+            NamespaceSymbols.Add(element.Name, (INamedTypeSymbol)element);
         }
 
         private void AddClass(ITypeSymbol element) {
@@ -60,16 +92,16 @@ namespace CTMGenerator {
                 OutputPath = ModelBuilderHelper.GetSavePath(element);
             }
 
-            Debugger.Launch();
+            //Debugger.Launch();
 
-            var elementAttributes = element.GetAttributes();
+            ImmutableArray<AttributeData> elementAttributes = element.GetAttributes();
             IdentifierScope? identifierScope = ModelBuilderHelper.GetIdentifierScope(elementAttributes);
-            var isAbstract = Utilities.GetAttributeByName(element.GetAttributes(), nameof(IsAbstract));
-            var instanceOfClass = element.BaseType != null ? new Class() { Name = element.BaseType.Name } : null;
+            bool isAbstract = Utilities.GetAttributeByName(elementAttributes, nameof(IsAbstract)) != null;
+            Class? instanceOfClass = element.BaseType != null ? new Class() { Name = element.BaseType.Name } : null;
 
-            var elementClass = new Class {
+            Class elementClass = new() {
                 Name = element.Name.Substring(1),
-                IsAbstract = isAbstract != null,
+                IsAbstract = isAbstract,
                 IdentifierScope = identifierScope != null ? (IdentifierScope) identifierScope : IdentifierScope.Local, // TODO Standardwert?
                 Identifier = null, // Attribut welches IdentifierScope beinhaltet TODO Wie bestimmen?
                 InstanceOf = instanceOfClass,
@@ -79,7 +111,9 @@ namespace CTMGenerator {
                 Summary = ModelBuilderHelper.GetFirstString(elementAttributes, nameof(Summary))
             };
 
-            var members = element.GetMembers();
+            // TODO BaseTypes später hinzufügen?
+
+            ImmutableArray<ISymbol> members = element.GetMembers();
             var (properties, methodes, events) = ModelBuilderHelper.GetClassMembers(members);
 
             var (references, attributes) = ModelBuilderHelper.ConvertProperties(properties, out var refTypeInfos);
@@ -163,6 +197,9 @@ namespace CTMGenerator {
                             string comment = $"TODO Model Interface should be partial or implement {nameof(IModelElement)}!";
                             currentType.Comments.Add(new CodeCommentStatement(comment));
                         }
+                    }
+                    else if (currentType.IsEnum) {
+                        types.RemoveAt(i);
                     }
                 }
             }
