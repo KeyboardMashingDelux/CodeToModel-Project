@@ -26,7 +26,8 @@ using Parameter = NMF.Models.Meta.Parameter;
 using SystemAttribute = System.Attribute;
 
 namespace CTMGenerator {
-    public class ModelBuilderHelper {
+
+    internal class ModelBuilderHelper {
 
         public const string DefaultUri = "http://GENERATED.com";
         public const string DefaultFilename = "GENERATED.FORGOT.ASSEMBLY.INFO.nmeta";
@@ -79,14 +80,14 @@ namespace CTMGenerator {
                 bool isNullableType = type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
 
                 // TODO genrisch und collectionexpression überspringen
-                if (//(type.IsGenericType && !isNullableType) ||
-                    (type.BaseType != null && type.BaseType.Name.Equals(nameof(ICollectionExpression)))) {
-                    continue;
-                }
+                //if (//(type.IsGenericType && !isNullableType) && // Kein ISet-, IOrderedSet-, IList-, ICollection
+                //    (type.BaseType != null && type.BaseType.Name.Equals(nameof(ICollectionExpression)))) {
+                //    continue;
+                //}
 
-                // TODO Was wenn meherere TypeArguments z.B. eigene Dictionary implementation
+                // TODO Kommen Listen von Listen durch? Wenn ja dafür sorgen, dass übersprungen wird
+
                 ITypeSymbol typeArgument = GetTypeArgument(type) ?? type;
-                // TODO Werden Listen von Listen unterstützt? IListExpression<IListExpression<string>>?
                 bool isCollection = !SymbolEqualityComparer.Default.Equals(type, typeArgument) && !isNullableType;
                 SpecialType typeArgumentSpecialType = typeArgument.SpecialType;
                 ImmutableArray<AttributeData> propertyAttributes = property.GetAttributes();
@@ -103,7 +104,8 @@ namespace CTMGenerator {
                         UpperBound = GetUpperBound(propertyAttributes, isCollection),
                         Type = GetPrimitiveType(isCollection ? typeArgumentSpecialType : specialType),
                         Remarks = GetFirstString(propertyAttributes, nameof(Remarks)),
-                        Summary = GetFirstString(propertyAttributes, nameof(Summary))
+                        Summary = GetFirstString(propertyAttributes, nameof(Summary)),
+                        Refines = null // TODO
                     };
 
                     attributes.Add(attribute);
@@ -113,11 +115,6 @@ namespace CTMGenerator {
                     bool isUnique = IsUnique(checkType);
                     bool isOrdered = IsOrdered(checkType);
 
-                    // TODO Wenn generisch nach Expression gucken, wenn nicht generisch dann Fehler
-                    //if ((isUnique || isOrdered) && !isNullableType && checkType is INamedTypeSymbol namedType && namedType.IsGenericType) {
-                    //    continue;
-                    //}
-
                     Reference reference = new() {
                         Name = property.Name,
                         IsUnique = isUnique,
@@ -125,10 +122,10 @@ namespace CTMGenerator {
                         LowerBound = GetLowerBound(propertyAttributes, IsNullable(type)),
                         UpperBound = GetUpperBound(propertyAttributes, isCollection),
                         IsContainment = Utilities.GetAttributeByName(propertyAttributes, nameof(ContainmentAttribute)) != null,
-                        Remarks = GetFirstString(propertyAttributes, nameof(Remarks)),
-                        Summary = GetFirstString(propertyAttributes, nameof(Summary))
+                        Remarks = GetFirstString(propertyAttributes, nameof(Remarks)), // TODO Aus Doccomment auslesen?
+                        Summary = GetFirstString(propertyAttributes, nameof(Summary)),
+                        Refines = null // TODO
                     };
-                    // TODO DeclaringType kann ignoriert werden? Oder nur bei override interessant?
 
                     // TODO Assumes the ref is a model interface - What if just a normal Object?
                     string refName = (isCollection ? typeArgument : type).Name;
@@ -141,25 +138,19 @@ namespace CTMGenerator {
                         opposites.Add(oppositeName, reference);
                     }
                 }
-
-
-                // TODO This is the way Für Enumerationen
-                //PrimitiveType ptype = new PrimitiveType() {
-                //    Name = typeof(bool).Name,
-                //    SystemType = typeof(bool).FullName
-                //};
             }
 
-            // TODO Kann opposite in anderem Interface sein?
-            foreach (var opposite in opposites) {
-                string oppositeName = opposite.Key;
-                IReference thisRef = opposite.Value;
+            // TODO Kann opposite in anderem Interface sein? -> Ja
+            // Wie refernzen später machen
+            //foreach (var opposite in opposites) {
+            //    string oppositeName = opposite.Key;
+            //    IReference thisRef = opposite.Value;
 
-                if (opposites.ContainsKey(thisRef.Name)) {
-                    IReference oppositeRef = opposites[thisRef.Name];
-                    thisRef.Opposite = oppositeRef;
-                }
-            }
+            //    if (opposites.ContainsKey(thisRef.Name)) {
+            //        IReference oppositeRef = opposites[thisRef.Name];
+            //        thisRef.Opposite = oppositeRef;
+            //    }
+            //}
 
             return (references, attributes);
         }
@@ -199,7 +190,7 @@ namespace CTMGenerator {
                     }
                 }
 
-                ConvertParameters(method.Parameters, operation);
+                ConvertParameters(method.Parameters);
 
                 operations.Add(operation);
             }
@@ -207,8 +198,8 @@ namespace CTMGenerator {
             return operations;
         }
 
-        public static List<IParameter> ConvertParameters(ImmutableArray<IParameterSymbol> parameterSymbols, IOperation operation) {
-            List<IParameter> parameters = [];
+        public static List<Parameter> ConvertParameters(ImmutableArray<IParameterSymbol> parameterSymbols) {
+            List<Parameter> parameters = [];
 
 
 
@@ -232,8 +223,7 @@ namespace CTMGenerator {
                     IsOrdered = IsOrdered(type),
                     LowerBound = GetLowerBound(parameterAttributes, IsNullable(type)),
                     UpperBound = GetUpperBound(parameterAttributes, isCollection),
-                    Operation = operation,
-                    Remarks = GetFirstString(parameterAttributes, nameof(Remarks)),
+                    Remarks = GetFirstString(parameterAttributes, nameof(Remarks)), // TODO Wird ignoriert?
                     Summary = GetFirstString(parameterAttributes, nameof(Summary))
                 };
 
@@ -272,7 +262,7 @@ namespace CTMGenerator {
             return events;
         }
 
-        public static List<ILiteral> ConvertLiterals(List<IFieldSymbol> literalSymbols, IEnumeration enumeration) {
+        public static List<ILiteral> ConvertLiterals(List<IFieldSymbol> literalSymbols) {
             List<ILiteral> literals = [];
 
             foreach (var literalSymbol in literalSymbols) {
@@ -280,7 +270,6 @@ namespace CTMGenerator {
 
                 Literal literal = new() {
                     Name = literalSymbol.Name,
-                    Enumeration = enumeration,
                     Value = (int?) literalSymbol.ConstantValue,
                     Remarks = GetFirstString(literalAttributes, nameof(Remarks)),
                     Summary = GetFirstString(literalAttributes, nameof(Summary))
@@ -510,10 +499,10 @@ namespace CTMGenerator {
         /// Retrieves the <see cref="IdentifierScope"/> of the <see cref="IdentifierScopeAttribute"/>.
         /// </summary>
         /// <returns><see cref="IdentifierScope"/> or <see langword="null"/> if this attribute does not exist</returns>
-        public static IdentifierScope? GetIdentifierScope(ImmutableArray<AttributeData> attributes) {
+        public static IdentifierScope GetIdentifierScope(ImmutableArray<AttributeData> attributes) {
             var attribute = Utilities.GetAttributeByName(attributes, nameof(IdentifierScopeAttribute));
             var ca = attribute?.ConstructorArguments;
-            return (IdentifierScope?)ca?[0].Value;
+            return (IdentifierScope?)ca?[0].Value ?? IdentifierScope.Inherit;
         }
 
 

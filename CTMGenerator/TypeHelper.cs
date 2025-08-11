@@ -67,7 +67,7 @@ namespace CTMGenerator {
             // Bedeutet sollte keine Referenz sein?
             // Aber bei erzeugung kann ja nicht bekannt sein ob Teil des Modells?
             // Im nachhinein Referenz in Attribut umwandeln?
-            Reference.ReferenceType = (IReferenceType)GetPrimitiveType();
+            //Reference.ReferenceType = (IReferenceType)GetPrimitiveType();
         }
 
         /// <summary>

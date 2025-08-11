@@ -68,7 +68,6 @@ namespace CTMGenerator {
 
             Enumeration enumeration = new() {
                 Name = element.Name,
-                Namespace = Namespace,
                 Remarks = ModelBuilderHelper.GetFirstString(elementAttributes, nameof(Remarks)),
                 Summary = ModelBuilderHelper.GetFirstString(elementAttributes, nameof(Summary))
             };
@@ -79,10 +78,10 @@ namespace CTMGenerator {
                                                        .Where(f => !f.IsImplicitlyDeclared)
                                                        .ToList();
 
-            List<ILiteral> literals = ModelBuilderHelper.ConvertLiterals(literalSymbols, enumeration);
-            //enumeration.Literals.AddRange(null);
+            List<ILiteral> literals = ModelBuilderHelper.ConvertLiterals(literalSymbols);
+            enumeration.Literals.AddRange(literals);
 
-            //Namespace.Types.Add(enumeration); TODO Warum hier nicht benötigt?
+            Namespace.Types.Add(enumeration);
             // Since elemtn represents an enum it is guaranteed to be an INamedTypeSymbol
             NamespaceSymbols.Add(element.Name, (INamedTypeSymbol)element);
         }
@@ -95,23 +94,22 @@ namespace CTMGenerator {
             //Debugger.Launch();
 
             ImmutableArray<AttributeData> elementAttributes = element.GetAttributes();
-            IdentifierScope? identifierScope = ModelBuilderHelper.GetIdentifierScope(elementAttributes);
+            IdentifierScope identifierScope = ModelBuilderHelper.GetIdentifierScope(elementAttributes);
             bool isAbstract = Utilities.GetAttributeByName(elementAttributes, nameof(IsAbstract)) != null;
             Class? instanceOfClass = element.BaseType != null ? new Class() { Name = element.BaseType.Name } : null;
 
             Class elementClass = new() {
                 Name = element.Name.Substring(1),
                 IsAbstract = isAbstract,
-                IdentifierScope = identifierScope != null ? (IdentifierScope) identifierScope : IdentifierScope.Local, // TODO Standardwert?
-                Identifier = null, // Attribut welches IdentifierScope beinhaltet TODO Wie bestimmen?
-                InstanceOf = instanceOfClass,
-                Namespace = Namespace,
-                Parent = null,
+                IdentifierScope = identifierScope,
+                Identifier = null, // Attribut welches IdentifierScope beinhaltet -> Am Ende aus Attribut List suchen (IdAttribut)
+                InstanceOf = instanceOfClass, // TODO Attribut InstanceOf(CLASS)
                 Remarks = ModelBuilderHelper.GetFirstString(elementAttributes, nameof(Remarks)),
                 Summary = ModelBuilderHelper.GetFirstString(elementAttributes, nameof(Summary))
             };
 
-            // TODO BaseTypes später hinzufügen?
+            // TODO BaseTypes später hinzufügen? -> Wenn nicht ModelElement, new Class(Name (ohne I))
+            // Siehe CreateReferences
 
             ImmutableArray<ISymbol> members = element.GetMembers();
             var (properties, methodes, events) = ModelBuilderHelper.GetClassMembers(members);
@@ -131,6 +129,8 @@ namespace CTMGenerator {
 
             Namespace.Types.Add(elementClass);
             // Since elemtn represents an interface it is guaranteed to be an INamedTypeSymbol
+            // TODO Erst bekannte elemente speichern
+            // -> Dann ModelElemente erstellen
             NamespaceSymbols.Add(element.Name, (INamedTypeSymbol) element);
         }
 
