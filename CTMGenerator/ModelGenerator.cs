@@ -110,7 +110,7 @@ namespace CTMGenerator {
             }
 
             foreach (ModelBuilder model in models.Values) {
-                model.CreateReferences();
+                model.CreateModel();
                 model.DoSave();
                 context.AddSource($"{model.GetName()}.g.cs", model.DoCreateCode());
             }

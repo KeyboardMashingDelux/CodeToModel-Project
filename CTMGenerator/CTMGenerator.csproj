@@ -23,7 +23,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\CTMLib\CTMLib.csproj" />
+		<ProjectReference Include="..\CTMLib\CTMLib.csproj" PrivateAssets="all"/>
 	</ItemGroup>
 
 	<PropertyGroup>

@@ -1,16 +1,15 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using CTMLib;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CSharp;
-using NMF.Models.Meta;
-using NMF.Models.Repository;
-using System.CodeDom;
-using System.CodeDom.Compiler;
-using CTMLib;
-using NMF.Utilities;
-using System.Diagnostics;
 using NMF.Expressions.Linq;
 using NMF.Models;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.CSharp;
+using NMF.Models.Meta;
+using NMF.Models.Repository;
+using NMF.Utilities;
+using System.CodeDom;
+using System.CodeDom.Compiler;
 using System.Collections.Immutable;
 
 
@@ -48,97 +47,161 @@ namespace CTMGenerator {
         }
 
         public void AddElement(ITypeSymbol element) {
+            if (element is INamedTypeSymbol namedElement) {
+                NamespaceSymbols.Add(element.Name, namedElement);
+            }
+            else {
+                throw new InvalidOperationException($"Added element ({element.Name}) is not a INamedTypeSymbol.");
+            }
 
-            //Debugger.Launch();
-
-            switch (element.TypeKind) {
-                case TypeKind.Interface:
-                    AddClass(element);
-                    break;
-                case TypeKind.Enum:
-                    AddEnum(element);
-                    break;
-                default: return;
+            if (string.IsNullOrWhiteSpace(OutputPath)) {
+                OutputPath = ModelBuilderHelper.GetSavePath(element);
             }
         }
 
-        private void AddEnum(ITypeSymbol element) {
+        public void CreateModel() {
+            foreach (INamedTypeSymbol namedType in NamespaceSymbols.Values) {
+                switch (namedType.TypeKind) {
+                    case TypeKind.Interface:
+                        AddClass(namedType);
+                        break;
+                    case TypeKind.Enum:
+                        AddEnum(namedType);
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Added element ({namedType.Name}) is not an Interface or Enumeration.");
+                }
+            }
 
+            AddClassInformation();
+            CreateReferences();
+        }
+
+        /// <summary>
+        /// Adds a <see cref="Enumeration"/> to the model namespace.
+        /// </summary>
+        /// <param name="element"></param>
+        private void AddEnum(ITypeSymbol element) {
             ImmutableArray<AttributeData> elementAttributes = element.GetAttributes();
 
             Enumeration enumeration = new() {
                 Name = element.Name,
-                Remarks = ModelBuilderHelper.GetFirstString(elementAttributes, nameof(Remarks)),
-                Summary = ModelBuilderHelper.GetFirstString(elementAttributes, nameof(Summary))
+                Remarks = ModelBuilderHelper.GetDocElementText(element, Utilities.REMARKS),
+                Summary = ModelBuilderHelper.GetDocElementText(element, Utilities.SUMMARY)
             };
 
             List<IFieldSymbol> literalSymbols = element.GetMembers()
                                                        .OfType<IFieldSymbol>()
-                                                       // Should be enoght since enums can only have literals
-                                                       .Where(f => !f.IsImplicitlyDeclared)
+                                                       .Where(f => f.IsConst)
                                                        .ToList();
 
             List<ILiteral> literals = ModelBuilderHelper.ConvertLiterals(literalSymbols);
             enumeration.Literals.AddRange(literals);
 
             Namespace.Types.Add(enumeration);
-            // Since elemtn represents an enum it is guaranteed to be an INamedTypeSymbol
-            NamespaceSymbols.Add(element.Name, (INamedTypeSymbol)element);
-        }
-
-        private void AddClass(ITypeSymbol element) {
-            if (string.IsNullOrWhiteSpace(OutputPath)) {
-                OutputPath = ModelBuilderHelper.GetSavePath(element);
-            }
-
-            //Debugger.Launch();
-
-            ImmutableArray<AttributeData> elementAttributes = element.GetAttributes();
-            IdentifierScope identifierScope = ModelBuilderHelper.GetIdentifierScope(elementAttributes);
-            bool isAbstract = Utilities.GetAttributeByName(elementAttributes, nameof(IsAbstract)) != null;
-            Class? instanceOfClass = element.BaseType != null ? new Class() { Name = element.BaseType.Name } : null;
-
-            Class elementClass = new() {
-                Name = element.Name.Substring(1),
-                IsAbstract = isAbstract,
-                IdentifierScope = identifierScope,
-                Identifier = null, // Attribut welches IdentifierScope beinhaltet -> Am Ende aus Attribut List suchen (IdAttribut)
-                InstanceOf = instanceOfClass, // TODO Attribut InstanceOf(CLASS)
-                Remarks = ModelBuilderHelper.GetFirstString(elementAttributes, nameof(Remarks)),
-                Summary = ModelBuilderHelper.GetFirstString(elementAttributes, nameof(Summary))
-            };
-
-            // TODO BaseTypes später hinzufügen? -> Wenn nicht ModelElement, new Class(Name (ohne I))
-            // Siehe CreateReferences
-
-            ImmutableArray<ISymbol> members = element.GetMembers();
-            var (properties, methodes, events) = ModelBuilderHelper.GetClassMembers(members);
-
-            var (references, attributes) = ModelBuilderHelper.ConvertProperties(properties, out var refTypeInfos);
-            RefTypeInfos.AddRange(refTypeInfos);
-
-            List<Operation> operations = ModelBuilderHelper.ConvertMethods(methodes, out refTypeInfos);
-            RefTypeInfos.AddRange(refTypeInfos);
-
-            List<Event> eventsList = ModelBuilderHelper.ConvertEvents(events);
-
-            elementClass.References.AddRange(references);
-            elementClass.Attributes.AddRange(attributes);
-            elementClass.Operations.AddRange(operations);
-            elementClass.Events.AddRange(eventsList);
-
-            Namespace.Types.Add(elementClass);
-            // Since elemtn represents an interface it is guaranteed to be an INamedTypeSymbol
-            // TODO Erst bekannte elemente speichern
-            // -> Dann ModelElemente erstellen
-            NamespaceSymbols.Add(element.Name, (INamedTypeSymbol) element);
         }
 
         /// <summary>
-        /// Creates all non-generic references of the model. 
-        /// This should be called before a call to DoSave() or DoCreateCode().
+        /// Adds a <see cref="Class"/> with basic information like it's name to the model namespace.
         /// </summary>
-        public void CreateReferences() {
+        private void AddClass(ITypeSymbol element) {
+            ImmutableArray<AttributeData> elementAttributes = element.GetAttributes();
+ 
+            Class elementClass = new() {
+                Name = element.Name.Substring(1),
+                IsAbstract = Utilities.GetAttributeByName(elementAttributes, nameof(IsAbstract)) != null,
+                IdentifierScope = ModelBuilderHelper.GetIdentifierScope(elementAttributes),
+                Remarks = ModelBuilderHelper.GetDocElementText(element, Utilities.REMARKS),
+                Summary = ModelBuilderHelper.GetDocElementText(element, Utilities.SUMMARY)
+            };
+
+            Namespace.Types.Add(elementClass);
+        }
+
+        /// <summary>
+        /// Adds information, which was not added through <see cref="AddClass"/>, to all namespace classes.
+        /// </summary>
+        /// <remarks>
+        /// Assumes all Model elements have been added already!
+        /// </remarks>
+        private void AddClassInformation() {
+            foreach (IType type in Namespace.Types) {
+                if (type is not IClass classType) {
+                    continue;
+                }
+
+                // Analyzer should gurantee that the first letter of each interface is an "I"
+                INamedTypeSymbol classElement = NamespaceSymbols["I" + classType.Name];
+                ImmutableArray<AttributeData> classAttributes = classElement.GetAttributes();
+
+                // Add instanceof IClass
+                string? instanceOfClassName = ModelBuilderHelper.GetFirstString(classAttributes, nameof(InstanceOfAttribute));
+                if (GetTypeByName(instanceOfClassName) is IClass instanceOfClass) {
+                    classType.InstanceOf = instanceOfClass;
+                }
+
+                // Add base types
+                AddBaseType(classType, classElement.BaseType?.Name);
+                ImmutableArray<INamedTypeSymbol> classInterfaces = classElement.Interfaces;
+                foreach (INamedTypeSymbol classInterface in classInterfaces) {
+                    AddBaseType(classType, classInterface.Name);
+                }
+
+                // Add References, Attributes and Operations
+                ImmutableArray<ISymbol> members = classElement.GetMembers();
+                var (properties, methodes) = ModelBuilderHelper.GetClassMembers(members);
+
+                var (references, attributes, idAttribute) = ModelBuilderHelper.ConvertProperties(properties, out var refTypeInfos);
+                RefTypeInfos.AddRange(refTypeInfos);
+
+                List<Operation> operations = ModelBuilderHelper.ConvertMethods(methodes, out refTypeInfos);
+                RefTypeInfos.AddRange(refTypeInfos);
+
+                classType.References.AddRange(references);
+                classType.Attributes.AddRange(attributes);
+                classType.Operations.AddRange(operations);
+
+
+                // Add identifier
+                classType.Identifier = idAttribute;
+            }
+        }
+
+        /// <summary>
+        /// Adds a base type to the given <see cref="IClass"/>. <br/>
+        /// If the given base type name is not part of the model
+        /// creates a new class with the given name.
+        /// </summary>
+        public void AddBaseType(IClass classType, string? baseTypeName) {
+            if (!string.IsNullOrWhiteSpace(baseTypeName)) {
+                IEnumerable<IType> possibleRefType = Namespace.Types.Where((type) => type.Name.Equals(baseTypeName));
+                if (possibleRefType != null && possibleRefType.Count() == 1) {
+                    if (possibleRefType.First() is IClass refClass) {
+                        classType.BaseTypes.Add(refClass);
+                    }
+                }
+                else {
+                    classType.BaseTypes.Add(new Class() { Name = baseTypeName });
+                }
+            }
+        }
+
+        private IType? GetTypeByName(string? name) {
+            if (!string.IsNullOrWhiteSpace(name)) {
+                foreach (IType type in Namespace.Types) {
+                    if (type.Name.Equals(name)) {
+                        return type;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Creates all non-generic references of the model.
+        /// </summary>
+        private void CreateReferences() {
             for (int i = RefTypeInfos.Count - 1; i >= 0; i--) {
                 RefTypeInfos[i].SetType(Namespace.Types);
                 RefTypeInfos.RemoveAt(i);

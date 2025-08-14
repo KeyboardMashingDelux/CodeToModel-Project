@@ -12,7 +12,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\CTMAnalyzer\CTMAnalyzer.csproj"/>
+		<ProjectReference Include="..\CTMAnalyzer\CTMAnalyzer.csproj" PrivateAssets="all"/>
 	</ItemGroup>
 
 </Project>

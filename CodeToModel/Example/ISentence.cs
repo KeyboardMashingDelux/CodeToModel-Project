@@ -11,23 +11,20 @@ using System.ComponentModel;
 
 namespace CodeToModel.Example {
 
-
-    // Interface muss entweder partial sein oder IModelElement implementieren
     [ModelInterface]
-    [Remarks("TEST REMARK")]
-    [Summary("TEST SUMMARY")]
-    // TODO [IstanceOf(IOtherModelClass)] Create -> Annehmen das im gleichen Modell, sonst null
-    // TODO Analyzer -> gibt es IOtherModelClass?
     public partial interface ISentence {
 
-        // TODO Wenn Fehler in generierter Klasse IListExpression anstatt IList erfordern -> Analyzer 
-        // TODO Am besten gleich CodeFix
-
+        /// <summary>
+        /// TEST SUMMARY
+        /// </summary>
+        /// <remarks>
+        /// REMARKS TEST
+        /// </remarks>
         [UpperBound(64)] 
         [LowerBound(0)]
         //[Opposite(nameof(IWord.soemthng))]
-        public IListExpression<IWord> Words { get; } 
-        // Analyzer -> XExpressio = Kein Set
+        public IListExpression<IWord> Words { get; }
+        // Analyzer -> XExpressio = Kein set nur get
 
         // TODO Für Enumerationen:
         // TODO Bei bereits vorhandener = Primitiver Typ erzeugen
@@ -37,17 +34,14 @@ namespace CodeToModel.Example {
 
         //public SentenceTypes MainSentenceType { get; set; }
 
-        public IWord FirstWord { get; set; }
-        // Analyzer -> Keine XExpressio = Unbedingt Set
-
         [Id]
+        public IWord FirstWord { get; set; }
+        // Analyzer -> Keine XExpressio = Unbedingt set & get
+
         public int? WordCount { get; set; }
 
         public void PrintSentence(int times);
 
         public IWord WordsAsURI();
-
-        // Events erstmal überspringen
-        //public event PropertyChangedEventHandler WordCountChanged;
     }
 }

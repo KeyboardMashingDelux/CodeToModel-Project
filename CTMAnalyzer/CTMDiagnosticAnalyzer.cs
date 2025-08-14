@@ -7,6 +7,7 @@ using NMF.Utilities;
 using System.Collections;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using CTMLib;
 
 namespace CTMAnalyzer {
 

@@ -40,10 +40,9 @@ namespace CTMGenerator {
 
 
 
-        public static (List<IPropertySymbol> properties, List<IMethodSymbol> methodes, List<IEventSymbol> events) GetClassMembers(ImmutableArray<ISymbol> members) {
+        public static (List<IPropertySymbol> properties, List<IMethodSymbol> methodes) GetClassMembers(ImmutableArray<ISymbol> members) {
             List<IPropertySymbol> properties = [];
             List<IMethodSymbol> methodes = [];
-            List<IEventSymbol> events = [];
 
             foreach (var member in members) {
                 switch (member) {
@@ -55,8 +54,8 @@ namespace CTMGenerator {
                         methodes.Add(method);
                         break;
 
+                    // Events are currently not handeled
                     case IEventSymbol eventMember:
-                        events.Add(eventMember);
                         break;
 
                     // Skip accessors (get/set/add/remove)
@@ -65,25 +64,25 @@ namespace CTMGenerator {
                 }
             }
 
-            return (properties, methodes, events);
+            return (properties, methodes);
         }
 
-        public static (List<IReference> references, List<IAttribute> attributes)
+        public static (List<IReference> references, List<IAttribute> attributes, IAttribute? idAttribute)
             ConvertProperties(List<IPropertySymbol> properties, out List<TypeHelper> refTypeInfos) {
 
             List<IReference> references = [];
             List<IAttribute> attributes = [];
+            IAttribute? idAttribute = null;
             refTypeInfos = [];
             Dictionary<string, IReference> opposites = [];
             foreach (IPropertySymbol property in properties) {
                 INamedTypeSymbol type = (INamedTypeSymbol)property.Type;
                 bool isNullableType = type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
 
-                // TODO genrisch und collectionexpression überspringen
-                //if (//(type.IsGenericType && !isNullableType) && // Kein ISet-, IOrderedSet-, IList-, ICollection
-                //    (type.BaseType != null && type.BaseType.Name.Equals(nameof(ICollectionExpression)))) {
-                //    continue;
-                //}
+                if (!IsXExpression(property) && type.IsGenericType && !isNullableType) {
+                    // (type.BaseType != null && type.BaseType.Name.Equals(nameof(ICollectionExpression)))
+                    continue;
+                }
 
                 // TODO Kommen Listen von Listen durch? Wenn ja dafür sorgen, dass übersprungen wird
 
@@ -103,10 +102,14 @@ namespace CTMGenerator {
                         LowerBound = GetLowerBound(propertyAttributes, IsNullable(type)),
                         UpperBound = GetUpperBound(propertyAttributes, isCollection),
                         Type = GetPrimitiveType(isCollection ? typeArgumentSpecialType : specialType),
-                        Remarks = GetFirstString(propertyAttributes, nameof(Remarks)),
-                        Summary = GetFirstString(propertyAttributes, nameof(Summary)),
+                        Remarks = GetDocElementText(property, Utilities.REMARKS),
+                        Summary = GetDocElementText(property, Utilities.SUMMARY),
                         Refines = null // TODO
                     };
+
+                    if (Utilities.GetAttributeByName(propertyAttributes, nameof(IdAttribute)) != null) {
+                        idAttribute = attribute;
+                    } 
 
                     attributes.Add(attribute);
                 }
@@ -122,8 +125,8 @@ namespace CTMGenerator {
                         LowerBound = GetLowerBound(propertyAttributes, IsNullable(type)),
                         UpperBound = GetUpperBound(propertyAttributes, isCollection),
                         IsContainment = Utilities.GetAttributeByName(propertyAttributes, nameof(ContainmentAttribute)) != null,
-                        Remarks = GetFirstString(propertyAttributes, nameof(Remarks)), // TODO Aus Doccomment auslesen?
-                        Summary = GetFirstString(propertyAttributes, nameof(Summary)),
+                        Remarks = GetDocElementText(property, Utilities.REMARKS),
+                        Summary = GetDocElementText(property, Utilities.SUMMARY),
                         Refines = null // TODO
                     };
 
@@ -152,14 +155,14 @@ namespace CTMGenerator {
             //    }
             //}
 
-            return (references, attributes);
+            return (references, attributes, idAttribute);
         }
 
         public static List<Operation> ConvertMethods(List<IMethodSymbol> methods, out List<TypeHelper> refTypeInfos) {
             List<Operation> operations = [];
             refTypeInfos = [];
 
-            foreach (var method in methods) {
+            foreach (IMethodSymbol method in methods) {
                 ITypeSymbol returnType = method.ReturnType;
                 bool isNullableType = returnType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
                 ImmutableArray<AttributeData> methodAttributes = method.GetAttributes();
@@ -177,8 +180,8 @@ namespace CTMGenerator {
                     LowerBound = GetLowerBound(methodAttributes, IsNullable(returnType)),
                     UpperBound = GetUpperBound(methodAttributes, isCollection),
                     Refines = null, // TODO
-                    Remarks = GetFirstString(methodAttributes, nameof(Remarks)),
-                    Summary = GetFirstString(methodAttributes, nameof(Summary)),
+                    Remarks = GetDocElementText(method, Utilities.REMARKS),
+                    Summary = GetDocElementText(method, Utilities.SUMMARY)
                 };
 
                 if (specialType != SpecialType.System_Void) {
@@ -223,8 +226,8 @@ namespace CTMGenerator {
                     IsOrdered = IsOrdered(type),
                     LowerBound = GetLowerBound(parameterAttributes, IsNullable(type)),
                     UpperBound = GetUpperBound(parameterAttributes, isCollection),
-                    Remarks = GetFirstString(parameterAttributes, nameof(Remarks)), // TODO Wird ignoriert?
-                    Summary = GetFirstString(parameterAttributes, nameof(Summary))
+                    Remarks = GetDocElementText(parameterSymbol, Utilities.REMARKS), // TODO Testen ob ignoriert wird
+                    Summary = GetDocElementText(parameterSymbol, Utilities.SUMMARY) // oder Probleme bereitet
                 };
 
                 if (IsPrimitive(checkType.SpecialType)) {
@@ -237,42 +240,15 @@ namespace CTMGenerator {
             return parameters;
         }
 
-        public static List<Event> ConvertEvents(List<IEventSymbol> eventSymbols) {
-            List<Event> events = [];
-
-            foreach (var eventSymbol in eventSymbols) {
-                ImmutableArray<AttributeData> eventAttributes = eventSymbol.GetAttributes();
-
-                ITypeSymbol type = eventSymbol.Type;
-                bool isNullableType = type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
-
-                ITypeSymbol typeArgument = GetTypeArgument(type) ?? type;
-                ITypeSymbol checkType = isNullableType ? typeArgument : type;
-
-                Event @event = new() {
-                    Name = eventSymbol.Name,
-                    Type = new DataType() { Name = type.Name }, //TODO Wie?
-                    Remarks = GetFirstString(eventAttributes, nameof(Remarks)),
-                    Summary = GetFirstString(eventAttributes, nameof(Summary))
-                };
-
-                events.Add(@event);
-            }
-
-            return events;
-        }
-
         public static List<ILiteral> ConvertLiterals(List<IFieldSymbol> literalSymbols) {
             List<ILiteral> literals = [];
 
-            foreach (var literalSymbol in literalSymbols) {
-                ImmutableArray<AttributeData> literalAttributes = literalSymbol.GetAttributes();
-
+            foreach (IFieldSymbol literalSymbol in literalSymbols) {
                 Literal literal = new() {
                     Name = literalSymbol.Name,
-                    Value = (int?) literalSymbol.ConstantValue,
-                    Remarks = GetFirstString(literalAttributes, nameof(Remarks)),
-                    Summary = GetFirstString(literalAttributes, nameof(Summary))
+                    Value = (int?)literalSymbol.ConstantValue,
+                    Remarks = GetDocElementText(literalSymbol, Utilities.REMARKS),
+                    Summary = GetDocElementText(literalSymbol, Utilities.SUMMARY)
                 };
 
                 literals.Add(literal);
@@ -291,9 +267,9 @@ namespace CTMGenerator {
 
 
 
-            /// <summary>
-            /// Gets the primitive type by the special type.
-            /// </summary>
+        /// <summary>
+        /// Gets the primitive type by the special type.
+        /// </summary>
         public static IType? GetPrimitiveType(SpecialType specialType) {
             switch (specialType) {
                 case SpecialType.System_Boolean:
@@ -369,6 +345,15 @@ namespace CTMGenerator {
             }
 
             return null;
+        }
+
+        /// <returns>True for <see cref="IListExpression{T}"/>, <see cref="ISetExpression{T}"/> or 
+        /// <see cref="IOrderedSetExpression{T}"/></returns>
+        public static bool IsXExpression(ISymbol type) {
+            string typeName = type.Name;
+            return typeName.Equals(nameof(IListExpression<int>))
+                || typeName.Equals(nameof(ISetExpression<int>))
+                || typeName.Equals(nameof(IOrderedSetExpression<int>));
         }
 
         /// <summary>
@@ -514,6 +499,24 @@ namespace CTMGenerator {
         /// #############################
 
 
+
+        /// <summary>
+        /// Gets the text from the doc comment of the given <see cref="ISymbol"/> from the given name.
+        /// </summary>
+        /// <returns><see langword="null"/> if no text could be extracted.</returns>
+        public static string? GetDocElementText(ISymbol element, string docElementName) {
+            if (string.IsNullOrWhiteSpace(docElementName)) {
+                return null;
+            }
+
+            string? xml = element.GetDocumentationCommentXml();
+            if (string.IsNullOrWhiteSpace(xml)) {
+                return null;
+            }
+
+            XDocument doc = XDocument.Parse(xml);
+            return doc.Root.Element(docElementName)?.Value.Trim();
+        }
 
         /// <summary>
         /// Extracts the Ambient Namespace of a Namespace. 

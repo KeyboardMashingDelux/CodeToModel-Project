@@ -1,16 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <nmeta:Namespace xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Uri="http://github.com/CodeToModel" Prefix="Sentence" Name="Example" xmlns:xmi="http://www.omg.org/XMI" xmlns:nmeta="http://nmf.codeplex.com/nmeta/">
-  <Types xsi:type="nmeta:Class" IdentifierScope="Local" Name="Sentence" Summary="TEST SUMMARY" Remarks="TEST REMARK">
-    <Events Type="PropertyChangedEventHandler" Name="WordCountChanged" />
-    <References ReferenceType="nmeta:Class #//Word" IsOrdered="true" UpperBound="64" Name="Words" />
+  <Types xsi:type="nmeta:Class" BaseTypes="IModelElement IWord" Name="Punctuation" />
+  <Types xsi:type="nmeta:Class" Name="Sentence">
     <References ReferenceType="nmeta:Class #//Word" LowerBound="1" Name="FirstWord" />
-    <Operations LowerBound="1" Name="PrintSentence">
-      <Parameters LowerBound="1" Type="nmeta:PrimitiveType http://nmf.codeplex.com/nmeta/#//Integer" Name="times" />
-    </Operations>
+    <Operations LowerBound="1" Name="PrintSentence" />
     <Operations LowerBound="1" Type="IWord" Name="WordsAsURI" />
     <Attributes Type="nmeta:PrimitiveType http://nmf.codeplex.com/nmeta/#//Integer" Name="WordCount" />
   </Types>
-  <Types xsi:type="nmeta:Class" IdentifierScope="Local" Name="Word">
+  <Types xsi:type="nmeta:Class" BaseTypes="IModelElement" Name="Word">
     <Attributes LowerBound="1" Type="nmeta:PrimitiveType http://nmf.codeplex.com/nmeta/#//String" Name="Text" />
   </Types>
   <Types xsi:type="nmeta:Enumeration" Name="SentenceTypes">

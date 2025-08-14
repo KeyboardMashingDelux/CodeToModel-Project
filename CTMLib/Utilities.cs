@@ -1,15 +1,14 @@
-﻿
-
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using NMF.Models;
 using NMF.Utilities;
-using System;
 using System.Collections.Immutable;
-using System.Runtime.InteropServices.ComTypes;
-using System.Xml.Linq;
 
-namespace CTMAnalyzer {
+namespace CTMLib {
+
     public class Utilities {
+
+        public const string SUMMARY = "summary";
+        public const string REMARKS = "remarks";
 
         /// <summary>
         /// Finds the first occurence of an attribute by the given name.
