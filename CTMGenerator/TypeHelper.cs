@@ -1,5 +1,6 @@
 ﻿using NMF.Expressions;
 using NMF.Models.Meta;
+using Attribute = NMF.Models.Meta.Attribute;
 
 namespace CTMGenerator {
 
@@ -8,11 +9,15 @@ namespace CTMGenerator {
     /// </summary>
     public class TypeHelper {
 
-        private IReference? Reference;
+        public IReference? Reference { get; private set; }
 
-        private IOperation? Operation;
+        public IOperation? Operation { get; private set; }
 
-        private string TypeName;
+        public IParameter? Parameter { get; private set; }
+
+        private readonly string TypeName;
+
+
 
         /// <param name="reference">Reference which is missing a type.</param>
         /// <param name="typeName">Name of the missing type reference. Name and System type should match.</param>
@@ -28,40 +33,59 @@ namespace CTMGenerator {
             TypeName = typeName;
         }
 
-        public void SetType(ICollectionExpression<IType> types) {
-            if (Reference != null) {
-                SetReferenceType(types);
-            } 
-            else if (Operation != null) {
-                SetOperationType(types);
-            }
+        /// <param name="parameter">Parameter which is missing a type.</param>
+        /// <param name="typeName">Name of the missing type reference. Name and System type should match.</param>
+        public TypeHelper(IParameter parameter, string typeName) {
+            Parameter = parameter;
+            TypeName = typeName;
         }
 
-        public void SetOperationType(ICollectionExpression<IType> types) {
+        public bool SetType(ICollectionExpression<IType> types) {
+            if (Reference != null) {
+                return SetReferenceType(types);
+            } 
+            else if (Operation != null) {
+                return SetOperationType(types);
+            }
+            else if (Parameter != null) {
+                return SetParameterType(types);
+            }
+
+            return false;
+        }
+
+        public bool SetOperationType(ICollectionExpression<IType> types) {
             if (Operation == null) {
                 throw new InvalidOperationException($"Can't set Operation type for null! (null -> {TypeName})");
             }
 
-            IType? refType = GetRefType(types);
-            if (refType is not null) {
-                Operation.Type = refType;
-                return;
-            }
+            Operation.Type = GetRefType(types) ?? GetPrimitiveType();
 
-            Operation.Type = GetPrimitiveType();
+            return true;
         }
 
-        public void SetReferenceType(ICollectionExpression<IType> types) {
+        public bool SetParameterType(ICollectionExpression<IType> types) {
+            if (Parameter == null) {
+                throw new InvalidOperationException($"Can't set Operation type for null! (null -> {TypeName})");
+            }
+
+            Parameter.Type = GetRefType(types) ?? GetPrimitiveType();
+
+            return true;
+        }
+
+        public bool SetReferenceType(ICollectionExpression<IType> types) {
             if (Reference == null) {
                 throw new InvalidOperationException($"Can't set reference for null! (null -> {TypeName})");
             }
 
-            IType? refType = GetRefType(types);
             // TODO Brauche Enum Referenz -> Enumeration aber keine Referenez SÄDILÖHDFÖLACJ
-            if (refType is not null) {
-                Reference.ReferenceType = (IReferenceType)refType;
-                return;
+            if (GetRefType(types) is not null and IReferenceType refTypeAsIReference) {
+                Reference.ReferenceType = refTypeAsIReference;
+                return true;
             }
+
+            return false;
 
             // TODO Not an option
             // Bedeutet sollte keine Referenz sein?
@@ -89,6 +113,23 @@ namespace CTMGenerator {
             return new PrimitiveType() {
                 Name = TypeName,
                 SystemType = TypeName
+            };
+        }
+
+        /// <summary>
+        /// Converts the given <see cref="IReference"/> to a <see cref="IAttribute"/> and sets its <see cref="IType"/>. 
+        /// </summary>
+        public IAttribute ConvertToAttribute(IReference reference, ICollectionExpression<IType> types) {
+            return new Attribute() {
+                Name = reference.Name,
+                IsUnique = reference.IsUnique,
+                IsOrdered = reference.IsOrdered,
+                LowerBound = reference.LowerBound,
+                UpperBound = reference.UpperBound,
+                Type = GetRefType(types) ?? GetPrimitiveType(),
+                Remarks = reference.Remarks,
+                Summary = reference.Summary,
+                Refines = null // TODO
             };
         }
     }

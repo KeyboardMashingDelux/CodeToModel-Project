@@ -11,21 +11,27 @@ using NMF.Utilities;
 using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
+using System.Diagnostics;
 
 
 namespace CTMGenerator {
 
     public class ModelBuilder {
 
-        private ModelRepository ModelRepository;
-        private INamespace Namespace;
+        private readonly ModelRepository ModelRepository;
+        private readonly Namespace Namespace;
 
-        private string FullName, Name, AmbientName, Prefix, Suffix;
+        private readonly string FullName, Name, AmbientName, Prefix, Suffix;
         private string? OutputPath;
 
-        private List<TypeHelper> RefTypeInfos;
+        private readonly PropertyConversionHelper PropertyConverter;
+        private readonly MethodConversionHelper MethodConverter;
+        private readonly LiteralConversionHelper LiteralConverter;
 
-        private IDictionary<string, INamedTypeSymbol> NamespaceSymbols;
+        private readonly List<TypeHelper> RefTypeInfos;
+
+        private readonly Dictionary<string, INamedTypeSymbol> NamespaceSymbols;
+
 
         public ModelBuilder(string? uri, string? filename) {
             Uri namespaceURI = new(uri ?? ModelBuilderHelper.DefaultUri);
@@ -42,17 +48,18 @@ namespace CTMGenerator {
                 Summary = null
             };
 
+            PropertyConverter = new();
+            MethodConverter = new();
+            LiteralConverter = new();
+
             RefTypeInfos = [];
-            NamespaceSymbols = new Dictionary<string, INamedTypeSymbol>();
+            NamespaceSymbols = [];
+
+            //Debugger.Launch();
         }
 
-        public void AddElement(ITypeSymbol element) {
-            if (element is INamedTypeSymbol namedElement) {
-                NamespaceSymbols.Add(element.Name, namedElement);
-            }
-            else {
-                throw new InvalidOperationException($"Added element ({element.Name}) is not a INamedTypeSymbol.");
-            }
+        public void AddElement(INamedTypeSymbol element) {
+            NamespaceSymbols.Add(element.Name, element);
 
             if (string.IsNullOrWhiteSpace(OutputPath)) {
                 OutputPath = ModelBuilderHelper.GetSavePath(element);
@@ -69,7 +76,7 @@ namespace CTMGenerator {
                         AddEnum(namedType);
                         break;
                     default:
-                        throw new InvalidOperationException($"Added element ({namedType.Name}) is not an Interface or Enumeration.");
+                        break;
                 }
             }
 
@@ -86,7 +93,7 @@ namespace CTMGenerator {
 
             Enumeration enumeration = new() {
                 Name = element.Name,
-                Remarks = ModelBuilderHelper.GetDocElementText(element, Utilities.REMARKS),
+                Remarks = ModelBuilderHelper.GetElementRemarks(element),
                 Summary = ModelBuilderHelper.GetDocElementText(element, Utilities.SUMMARY)
             };
 
@@ -95,8 +102,8 @@ namespace CTMGenerator {
                                                        .Where(f => f.IsConst)
                                                        .ToList();
 
-            List<ILiteral> literals = ModelBuilderHelper.ConvertLiterals(literalSymbols);
-            enumeration.Literals.AddRange(literals);
+            LiteralConverter.CleanConvert(literalSymbols);
+            enumeration.Literals.AddRange(LiteralConverter.Literals);
 
             Namespace.Types.Add(enumeration);
         }
@@ -111,8 +118,8 @@ namespace CTMGenerator {
                 Name = element.Name.Substring(1),
                 IsAbstract = Utilities.GetAttributeByName(elementAttributes, nameof(IsAbstract)) != null,
                 IdentifierScope = ModelBuilderHelper.GetIdentifierScope(elementAttributes),
-                Remarks = ModelBuilderHelper.GetDocElementText(element, Utilities.REMARKS),
-                Summary = ModelBuilderHelper.GetDocElementText(element, Utilities.SUMMARY)
+                Remarks = ModelBuilderHelper.GetElementRemarks(element),
+                Summary = ModelBuilderHelper.GetElementSummary(element)
             };
 
             Namespace.Types.Add(elementClass);
@@ -151,37 +158,40 @@ namespace CTMGenerator {
                 ImmutableArray<ISymbol> members = classElement.GetMembers();
                 var (properties, methodes) = ModelBuilderHelper.GetClassMembers(members);
 
-                var (references, attributes, idAttribute) = ModelBuilderHelper.ConvertProperties(properties, out var refTypeInfos);
-                RefTypeInfos.AddRange(refTypeInfos);
+                PropertyConverter.CleanConvert(properties);
+                RefTypeInfos.AddRange(PropertyConverter.RefTypeInfos);
 
-                List<Operation> operations = ModelBuilderHelper.ConvertMethods(methodes, out refTypeInfos);
-                RefTypeInfos.AddRange(refTypeInfos);
+                MethodConverter.CleanConvert(methodes);
+                RefTypeInfos.AddRange(MethodConverter.RefTypeInfos);
 
-                classType.References.AddRange(references);
-                classType.Attributes.AddRange(attributes);
-                classType.Operations.AddRange(operations);
+                classType.References.AddRange(PropertyConverter.References);
+                classType.Attributes.AddRange(PropertyConverter.Attributes);
+                classType.Operations.AddRange(MethodConverter.Operations);
 
 
                 // Add identifier
-                classType.Identifier = idAttribute;
+                // TODO Was wenn Referenz die zu Attribut wird?
+                classType.Identifier = PropertyConverter.IdAttribute;
             }
         }
 
         /// <summary>
-        /// Adds a base type to the given <see cref="IClass"/>. <br/>
-        /// If the given base type name is not part of the model
-        /// creates a new class with the given name.
+        /// Adds a base type to the given <see cref="IClass"/>
+        /// if the given base type name is part of the model.
+        /// <br/>
+        /// Should the given baseTypeName represent an interface retries with
+        /// a non-interface name.
         /// </summary>
         public void AddBaseType(IClass classType, string? baseTypeName) {
-            if (!string.IsNullOrWhiteSpace(baseTypeName)) {
+            if (!string.IsNullOrWhiteSpace(baseTypeName) && !baseTypeName.Equals("IModelElement")) {
                 IEnumerable<IType> possibleRefType = Namespace.Types.Where((type) => type.Name.Equals(baseTypeName));
                 if (possibleRefType != null && possibleRefType.Count() == 1) {
                     if (possibleRefType.First() is IClass refClass) {
                         classType.BaseTypes.Add(refClass);
                     }
                 }
-                else {
-                    classType.BaseTypes.Add(new Class() { Name = baseTypeName });
+                else if (Utilities.IsValidInterfaceName(baseTypeName)) {
+                    AddBaseType(classType, baseTypeName.Substring(1));
                 }
             }
         }
@@ -203,7 +213,14 @@ namespace CTMGenerator {
         /// </summary>
         private void CreateReferences() {
             for (int i = RefTypeInfos.Count - 1; i >= 0; i--) {
-                RefTypeInfos[i].SetType(Namespace.Types);
+                TypeHelper refTypeInfo = RefTypeInfos[i];
+                if (!refTypeInfo.SetType(Namespace.Types) && refTypeInfo.Reference != null) {
+                    IReference reference = refTypeInfo.Reference;
+                    if (reference.Parent is IClass referenceParent) {
+                        referenceParent.References.Remove(reference);
+                        referenceParent.Attributes.Add(refTypeInfo.ConvertToAttribute(reference, Namespace.Types));
+                    }
+                }
                 RefTypeInfos.RemoveAt(i);
             }
         }

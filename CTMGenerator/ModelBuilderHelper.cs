@@ -1,29 +1,10 @@
 ﻿
 using CTMLib;
 using Microsoft.CodeAnalysis;
-using Microsoft.CSharp;
-using NMF.Collections.Generic;
-using NMF.Expressions;
-using NMF.Models;
 using NMF.Models.Meta;
 using NMF.Models.Repository;
-using NMF.Transformations.Core;
-using NMF.Utilities;
-using System;
-using System.CodeDom;
 using System.Collections.Immutable;
-using System.Diagnostics;
-using System.Diagnostics.Tracing;
-using System.Reflection;
-using System.Reflection.Metadata;
-using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.ComTypes;
 using System.Xml.Linq;
-using static NMF.Models.Meta.Meta2ClassesTransformation;
-using Attribute = NMF.Models.Meta.Attribute;
-using IOperation = NMF.Models.Meta.IOperation;
-using Parameter = NMF.Models.Meta.Parameter;
-using SystemAttribute = System.Attribute;
 
 namespace CTMGenerator {
 
@@ -31,12 +12,6 @@ namespace CTMGenerator {
 
         public const string DefaultUri = "http://GENERATED.com";
         public const string DefaultFilename = "GENERATED.FORGOT.ASSEMBLY.INFO.nmeta";
-
-
-
-        /// #############################
-        /// ###   Member Conversion   ###
-        /// #############################
 
 
 
@@ -65,196 +40,6 @@ namespace CTMGenerator {
             }
 
             return (properties, methodes);
-        }
-
-        public static (List<IReference> references, List<IAttribute> attributes, IAttribute? idAttribute)
-            ConvertProperties(List<IPropertySymbol> properties, out List<TypeHelper> refTypeInfos) {
-
-            List<IReference> references = [];
-            List<IAttribute> attributes = [];
-            IAttribute? idAttribute = null;
-            refTypeInfos = [];
-            Dictionary<string, IReference> opposites = [];
-            foreach (IPropertySymbol property in properties) {
-                INamedTypeSymbol type = (INamedTypeSymbol)property.Type;
-                bool isNullableType = type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
-
-                if (!IsXExpression(property) && type.IsGenericType && !isNullableType) {
-                    // (type.BaseType != null && type.BaseType.Name.Equals(nameof(ICollectionExpression)))
-                    continue;
-                }
-
-                // TODO Kommen Listen von Listen durch? Wenn ja dafür sorgen, dass übersprungen wird
-
-                ITypeSymbol typeArgument = GetTypeArgument(type) ?? type;
-                bool isCollection = !SymbolEqualityComparer.Default.Equals(type, typeArgument) && !isNullableType;
-                SpecialType typeArgumentSpecialType = typeArgument.SpecialType;
-                ImmutableArray<AttributeData> propertyAttributes = property.GetAttributes();
-                ITypeSymbol checkType = isNullableType ? typeArgument : type;
-                SpecialType specialType = checkType.SpecialType;
-
-                // Attribut
-                if (isCollection ? IsPrimitive(typeArgumentSpecialType) : IsPrimitive(specialType)) {
-                    Attribute attribute = new() {
-                        Name = property.Name,
-                        IsUnique = isCollection && IsUnique(checkType),
-                        IsOrdered = isCollection && IsOrdered(checkType),
-                        LowerBound = GetLowerBound(propertyAttributes, IsNullable(type)),
-                        UpperBound = GetUpperBound(propertyAttributes, isCollection),
-                        Type = GetPrimitiveType(isCollection ? typeArgumentSpecialType : specialType),
-                        Remarks = GetDocElementText(property, Utilities.REMARKS),
-                        Summary = GetDocElementText(property, Utilities.SUMMARY),
-                        Refines = null // TODO
-                    };
-
-                    if (Utilities.GetAttributeByName(propertyAttributes, nameof(IdAttribute)) != null) {
-                        idAttribute = attribute;
-                    } 
-
-                    attributes.Add(attribute);
-                }
-                // Reference
-                else {
-                    bool isUnique = IsUnique(checkType);
-                    bool isOrdered = IsOrdered(checkType);
-
-                    Reference reference = new() {
-                        Name = property.Name,
-                        IsUnique = isUnique,
-                        IsOrdered = isOrdered,
-                        LowerBound = GetLowerBound(propertyAttributes, IsNullable(type)),
-                        UpperBound = GetUpperBound(propertyAttributes, isCollection),
-                        IsContainment = Utilities.GetAttributeByName(propertyAttributes, nameof(ContainmentAttribute)) != null,
-                        Remarks = GetDocElementText(property, Utilities.REMARKS),
-                        Summary = GetDocElementText(property, Utilities.SUMMARY),
-                        Refines = null // TODO
-                    };
-
-                    // TODO Assumes the ref is a model interface - What if just a normal Object?
-                    string refName = (isCollection ? typeArgument : type).Name;
-                    refTypeInfos.Add(new TypeHelper(reference, refName.StartsWith("I") ? refName.Substring(1) : refName));
-
-                    references.Add(reference);
-
-                    string? oppositeName = GetSecondString(propertyAttributes, nameof(OppositeAttribute));
-                    if (oppositeName != null) {
-                        opposites.Add(oppositeName, reference);
-                    }
-                }
-            }
-
-            // TODO Kann opposite in anderem Interface sein? -> Ja
-            // Wie refernzen später machen
-            //foreach (var opposite in opposites) {
-            //    string oppositeName = opposite.Key;
-            //    IReference thisRef = opposite.Value;
-
-            //    if (opposites.ContainsKey(thisRef.Name)) {
-            //        IReference oppositeRef = opposites[thisRef.Name];
-            //        thisRef.Opposite = oppositeRef;
-            //    }
-            //}
-
-            return (references, attributes, idAttribute);
-        }
-
-        public static List<Operation> ConvertMethods(List<IMethodSymbol> methods, out List<TypeHelper> refTypeInfos) {
-            List<Operation> operations = [];
-            refTypeInfos = [];
-
-            foreach (IMethodSymbol method in methods) {
-                ITypeSymbol returnType = method.ReturnType;
-                bool isNullableType = returnType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
-                ImmutableArray<AttributeData> methodAttributes = method.GetAttributes();
-
-                ITypeSymbol typeArgument = GetTypeArgument(returnType) ?? returnType;
-                bool isCollection = !SymbolEqualityComparer.Default.Equals(returnType, typeArgument) && !isNullableType;
-                SpecialType typeArgumentSpecialType = typeArgument.SpecialType;
-                ITypeSymbol checkType = isNullableType ? typeArgument : returnType;
-                SpecialType specialType = checkType.SpecialType;
-
-                Operation operation = new() {
-                    Name = method.Name,
-                    IsUnique = IsUnique(returnType),
-                    IsOrdered = IsOrdered(returnType),
-                    LowerBound = GetLowerBound(methodAttributes, IsNullable(returnType)),
-                    UpperBound = GetUpperBound(methodAttributes, isCollection),
-                    Refines = null, // TODO
-                    Remarks = GetDocElementText(method, Utilities.REMARKS),
-                    Summary = GetDocElementText(method, Utilities.SUMMARY)
-                };
-
-                if (specialType != SpecialType.System_Void) {
-                    if (IsPrimitive(specialType)) {
-                        operation.Type = GetPrimitiveType(specialType);
-                    }
-                    else {
-                        refTypeInfos.Add(new TypeHelper(operation, checkType.Name));
-                    }
-                }
-
-                ConvertParameters(method.Parameters);
-
-                operations.Add(operation);
-            }
-
-            return operations;
-        }
-
-        public static List<Parameter> ConvertParameters(ImmutableArray<IParameterSymbol> parameterSymbols) {
-            List<Parameter> parameters = [];
-
-
-
-            foreach (IParameterSymbol parameterSymbol in parameterSymbols) {
-                if (parameterSymbol.IsThis) {
-                    continue;
-                }
-
-                ITypeSymbol type = parameterSymbol.Type;
-                ImmutableArray<AttributeData> parameterAttributes = parameterSymbol.GetAttributes();
-                bool isNullableType = type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
-
-                ITypeSymbol typeArgument = GetTypeArgument(type) ?? type;
-                bool isCollection = !isNullableType && !SymbolEqualityComparer.Default.Equals(type, typeArgument);
-                ITypeSymbol checkType = isNullableType ? typeArgument : type;
-
-                Parameter parameter = new() {
-                    Name = parameterSymbol.Name,
-                    Direction = GetDirection(parameterSymbol.RefKind),
-                    IsUnique = IsUnique(type),
-                    IsOrdered = IsOrdered(type),
-                    LowerBound = GetLowerBound(parameterAttributes, IsNullable(type)),
-                    UpperBound = GetUpperBound(parameterAttributes, isCollection),
-                    Remarks = GetDocElementText(parameterSymbol, Utilities.REMARKS), // TODO Testen ob ignoriert wird
-                    Summary = GetDocElementText(parameterSymbol, Utilities.SUMMARY) // oder Probleme bereitet
-                };
-
-                if (IsPrimitive(checkType.SpecialType)) {
-                    parameter.Type = GetPrimitiveType(checkType.SpecialType);
-                }
-
-                parameters.Add(parameter);
-            }
-
-            return parameters;
-        }
-
-        public static List<ILiteral> ConvertLiterals(List<IFieldSymbol> literalSymbols) {
-            List<ILiteral> literals = [];
-
-            foreach (IFieldSymbol literalSymbol in literalSymbols) {
-                Literal literal = new() {
-                    Name = literalSymbol.Name,
-                    Value = (int?)literalSymbol.ConstantValue,
-                    Remarks = GetDocElementText(literalSymbol, Utilities.REMARKS),
-                    Summary = GetDocElementText(literalSymbol, Utilities.SUMMARY)
-                };
-
-                literals.Add(literal);
-            }
-
-            return literals;
         }
 
 
@@ -337,44 +122,6 @@ namespace CTMGenerator {
 
 
         /// <summary>
-        /// Retrives the first type argument of the given type.
-        /// </summary>
-        public static ITypeSymbol? GetTypeArgument(ITypeSymbol type) {
-            if (type is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.IsGenericType) {
-                return namedTypeSymbol.TypeArguments.FirstOrDefault();
-            }
-
-            return null;
-        }
-
-        /// <returns>True for <see cref="IListExpression{T}"/>, <see cref="ISetExpression{T}"/> or 
-        /// <see cref="IOrderedSetExpression{T}"/></returns>
-        public static bool IsXExpression(ISymbol type) {
-            string typeName = type.Name;
-            return typeName.Equals(nameof(IListExpression<int>))
-                || typeName.Equals(nameof(ISetExpression<int>))
-                || typeName.Equals(nameof(IOrderedSetExpression<int>));
-        }
-
-        /// <summary>
-        /// Gets the parameter direction.
-        /// </summary>
-        public static Direction GetDirection(RefKind refKind) {
-            switch (refKind) {
-                case RefKind.In:
-                case RefKind.RefReadOnlyParameter:
-                case RefKind.None:
-                    return Direction.In;
-                case RefKind.Out:
-                    return Direction.Out;
-                case RefKind.Ref:
-                    return Direction.InOut;
-                default:
-                    return Direction.In;
-            }
-        }
-
-        /// <summary>
         /// Determines if the given special type is primitive.
         /// </summary>
         public static bool IsPrimitive(SpecialType specialType) {
@@ -399,61 +146,6 @@ namespace CTMGenerator {
                 default:
                     return false;
             }
-        }
-
-        /// <summary>
-        /// Determines if the given type is ordered by NMF standards.
-        /// </summary>
-        public static bool IsOrdered(ITypeSymbol type) {
-            return type.Name.Equals(nameof(IListExpression<int>)) || type.Name.Equals(nameof(IOrderedSetExpression<int>));
-        }
-
-        /// <summary>
-        /// Determines if the given type is unique by NMF standards.
-        /// </summary>
-        public static bool IsUnique(ITypeSymbol type) {
-            return type.Name.Equals(nameof(ISetExpression<int>)) || type.Name.Equals(nameof(IOrderedSetExpression<int>));
-        }
-
-        /// <summary>
-        /// Checks if the given type is nullable.
-        /// </summary>
-        public static bool IsNullable(ITypeSymbol type) {
-            if (type is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.IsGenericType) {
-                if (namedTypeSymbol.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T) {
-                    return true;
-                }
-
-                foreach (ITypeSymbol typeArgument in namedTypeSymbol.TypeArguments) {
-                    if (!(typeArgument.NullableAnnotation == NullableAnnotation.Annotated)) {
-                        return false;
-                    }
-                }
-                return true;
-            }
-            else {
-                return type.NullableAnnotation == NullableAnnotation.Annotated;
-            }
-        }
-
-        /// <summary>
-        /// Retrieves the value of the <see cref="LowerBoundAttribute"/>.
-        /// </summary>
-        /// <param name="isNullable">Whether or not the type the attributes belong to is nullable.</param>
-        public static int GetLowerBound(ImmutableArray<AttributeData> attributes, bool isNullable) {
-            var attribute = Utilities.GetAttributeByName(attributes, nameof(LowerBoundAttribute));
-            var ca = attribute?.ConstructorArguments;
-            return (int)(ca?[0].Value ?? (isNullable ? 0 : 1));
-        }
-
-        /// <summary>
-        /// Retrieves the value of the <see cref="UpperBoundAttribute"/>.
-        /// </summary>
-        /// <param name="isCollection">Whether or not the type the attributes belong to is a collection.</param>
-        public static int GetUpperBound(ImmutableArray<AttributeData> attributes, bool isCollection) {
-            var attribute = Utilities.GetAttributeByName(attributes, nameof(UpperBoundAttribute));
-            var ca = attribute?.ConstructorArguments;
-            return (int)(ca?[0].Value ?? (isCollection ? -1 : 1));
         }
 
         /// <summary>
@@ -499,6 +191,21 @@ namespace CTMGenerator {
         /// #############################
 
 
+
+
+        /// <summary>
+        /// Convenienve method for <see cref="GetDocElementText"/> called with <see cref="Utilities.SUMMARY"/>.
+        /// </summary>
+        public static string? GetElementSummary(ISymbol element) {
+            return GetDocElementText(element, Utilities.SUMMARY);
+        }
+
+        /// <summary>
+        /// Convenienve method for <see cref="GetDocElementText"/> called with <see cref="Utilities.REMARKS"/>.
+        /// </summary>
+        public static string? GetElementRemarks(ISymbol element) {
+            return GetDocElementText(element, Utilities.REMARKS);
+        }
 
         /// <summary>
         /// Gets the text from the doc comment of the given <see cref="ISymbol"/> from the given name.

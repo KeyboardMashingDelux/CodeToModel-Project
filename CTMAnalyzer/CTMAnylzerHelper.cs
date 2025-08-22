@@ -35,10 +35,6 @@ namespace CTMAnalyzer {
             return baseList != null && baseList.Types.Any(t => t.ToString().Contains(nameof(IModelElement)));
         }
 
-        public static bool IsValidInterfaceName(string interfaceName) {
-            return interfaceName.StartsWith("I") && interfaceName.Length >= 2 && char.IsUpper(interfaceName[1]);
-        }
-
         public static Location? GetPropertyLocation(IPropertySymbol property) {
             ImmutableArray<Location> fieldLocations = property.Locations;
             Location? location = fieldLocations.FirstOrDefault();

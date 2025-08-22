@@ -2,13 +2,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NMF.Expressions.Linq;
-using NMF.Models;
-using NMF.Utilities;
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
-using System.Runtime.InteropServices.ComTypes;
 
 namespace CTMGenerator {
     [Generator]
@@ -94,7 +88,7 @@ namespace CTMGenerator {
             }
 
 
-            foreach (var element in providerData.elements) {
+            foreach (INamedTypeSymbol element in providerData.elements.OfType<INamedTypeSymbol>()) {
                 if (element == null) {
                     continue;
                 }

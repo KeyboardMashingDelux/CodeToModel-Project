@@ -361,11 +361,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-/CTMGenerator/.vshistory
-/CTMLib/.vshistory
-/CodeToModel/.vshistory/CodeToModel.csproj
-/CodeToModel/Example/.vshistory/ISentence.cs
-/CodeToModel/Example/.vshistory
-/CodeToModel/.vshistory/IVehicle.cs
-/CTMAnalyzer/.vshistory
-/CTMCodeFixes/.vshistory/CTMCodeFixes.csproj
+.vshistory
+

@@ -49,7 +49,7 @@ namespace CTMAnalyzer {
 
                 // Check interface name
                 string interfaceName = interfaceType.Name;
-                if (!CTMAnylzerHelper.IsValidInterfaceName(interfaceName)) {
+                if (!Utilities.IsValidInterfaceName(interfaceName)) {
                     diagnostic = Diagnostic.Create(
                             CTMDiagnostics.InterfaceNameDescriptor,
                             interfaceDeclaration.Identifier.GetLocation(),

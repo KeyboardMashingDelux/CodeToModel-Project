@@ -47,7 +47,7 @@ namespace CTMLib {
 
         public static bool IsLibAttributeClass(INamedTypeSymbol? attributeClass, string attributeName) {
             return attributeClass?.Name == attributeName && attributeClass.ContainingNamespace is {
-                Name: nameof(CTMLib),
+                Name: "CTMLib",
                 ContainingNamespace.IsGlobalNamespace: true
             };
         }
@@ -62,7 +62,7 @@ namespace CTMLib {
             if (assembly == null)
                 return [];
 
-            List<AttributeData> metadataAttributes = Utilities.GetAttributesByName(assembly.GetAttributes(), nameof(ModelMetadataAttribute));
+            List<AttributeData> metadataAttributes = GetAttributesByName(assembly.GetAttributes(), nameof(ModelMetadataAttribute));
             if (metadataAttributes.IsNullOrEmpty()) {
                 return [];
             }
@@ -82,6 +82,10 @@ namespace CTMLib {
             }
 
             return metadata;
+        }
+
+        public static bool IsValidInterfaceName(string interfaceName) {
+            return interfaceName.StartsWith("I") && interfaceName.Length >= 2 && char.IsUpper(interfaceName[1]);
         }
     }
 }

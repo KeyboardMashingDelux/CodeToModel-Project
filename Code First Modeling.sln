@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CTMTests", "CTMTests\CTMTes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CTMAnalyzer", "CTMAnalyzer\CTMAnalyzer.csproj", "{603F1A62-B181-4144-8FC8-988ABC0F1A2E}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CTMUtilities", "CTMUtilities\CTMUtilities.shproj", "{672BE810-EC9A-4640-BC59-BD6594E72182}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,5 +53,9 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {30793B0B-3046-4D79-987C-ECD665CCFF60}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		CTMUtilities\CTMUtilities.projitems*{672be810-ec9a-4640-bc59-bd6594e72182}*SharedItemsImports = 13
+		CTMUtilities\CTMUtilities.projitems*{d970e0b9-3da6-49d3-b9d1-4892801e504d}*SharedItemsImports = 5
 	EndGlobalSection
 EndGlobal

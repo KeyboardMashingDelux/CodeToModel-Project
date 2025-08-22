@@ -14,6 +14,8 @@ namespace CodeToModel.Example {
     [ModelInterface]
     public partial interface ISentence {
 
+        //[Opposite(nameof(IWord.soemthng))]
+
         /// <summary>
         /// TEST SUMMARY
         /// </summary>
@@ -22,7 +24,6 @@ namespace CodeToModel.Example {
         /// </remarks>
         [UpperBound(64)] 
         [LowerBound(0)]
-        //[Opposite(nameof(IWord.soemthng))]
         public IListExpression<IWord> Words { get; }
         // Analyzer -> XExpressio = Kein set nur get
 
@@ -30,17 +31,17 @@ namespace CodeToModel.Example {
         // TODO Bei bereits vorhandener = Primitiver Typ erzeugen
         // TODO Bei eigener als model element & Reference erzeugen -> Neues Enum Attribut ModelEnum
         // -=> GEHT ABER NICHT ???
-        //public ISetExpression<SentenceTypes> SentenceTypes { get; set; }
+        public ISetExpression<SentenceTypes> SentenceTypes { get; }
 
-        //public SentenceTypes MainSentenceType { get; set; }
+        public SentenceTypes MainSentenceType { get; set; }
 
-        [Id]
         public IWord FirstWord { get; set; }
         // Analyzer -> Keine XExpressio = Unbedingt set & get
 
+        [Id]
         public int? WordCount { get; set; }
 
-        public void PrintSentence(int times);
+        public void PrintSentence(int times, IWord seperator);
 
         public IWord WordsAsURI();
     }
