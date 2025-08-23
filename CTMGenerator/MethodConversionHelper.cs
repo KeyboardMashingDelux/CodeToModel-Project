@@ -1,9 +1,7 @@
-﻿using CTMLib;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using NMF.Models.Meta;
 using NMF.Utilities;
 using System.Collections.Immutable;
-using System.Xml.Linq;
 
 namespace CTMGenerator {
 
@@ -16,12 +14,13 @@ namespace CTMGenerator {
 
         public MethodConversionHelper() {
             ParameterConverter = new();
-            Reset();
+            Operations = [];
+            RefTypeInfos = [];
         }
 
         public void Reset() {
-            Operations = [];
-            RefTypeInfos = [];
+            Operations.Clear();
+            RefTypeInfos.Clear();
         }
 
         public void CleanConvert(List<IMethodSymbol> methods) {

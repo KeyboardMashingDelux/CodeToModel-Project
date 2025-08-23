@@ -1,7 +1,5 @@
-﻿using CTMLib;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using NMF.Models.Meta;
-using System.Xml.Linq;
 
 namespace CTMGenerator {
 
@@ -11,12 +9,12 @@ namespace CTMGenerator {
 
 
 
-        public LiteralConversionHelper() { 
-            Reset();
+        public LiteralConversionHelper() {
+            Literals = [];
         }
 
         public void Reset() {
-            Literals = [];
+            Literals.Clear();
         }
 
         public void CleanConvert(List<IFieldSymbol> literalSymbols) {

@@ -18,15 +18,19 @@ namespace CTMGenerator {
 
 
         public PropertyConversionHelper() {
-            Reset();
-        }
-
-        public void Reset() {
             References = [];
             Attributes = [];
             IdAttribute = null;
             RefTypeInfos = [];
             Opposites = [];
+        }
+
+        public void Reset() {
+            References.Clear();
+            Attributes.Clear();
+            IdAttribute = null;
+            RefTypeInfos.Clear();
+            Opposites.Clear();
         }
 
         public void CleanConvert(List<IPropertySymbol> properties) { 

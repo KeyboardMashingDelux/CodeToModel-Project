@@ -6,13 +6,17 @@ using NMF.Models;
 using NMF.Utilities;
 using System.Collections;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using CTMLib;
 
 namespace CTMAnalyzer {
 
+    /// <summary>
+    /// CodeToModel <see cref="DiagnosticAnalyzer"/> implementation.
+    /// </summary>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class CTMDiagnosticAnalyzer : DiagnosticAnalyzer {
+
+        /// <inheritdoc/>
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; }
             = ImmutableArray.Create(
                 CTMDiagnostics.InterfaceNameDescriptor, 
@@ -24,7 +28,7 @@ namespace CTMAnalyzer {
                 CTMDiagnostics.IOrderedSetExpressionInstead);
 
 
-
+        /// <inheritdoc/>
         public override void Initialize(AnalysisContext context) {
             context.EnableConcurrentExecution();
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
@@ -34,6 +38,9 @@ namespace CTMAnalyzer {
             context.RegisterSyntaxNodeAction(AnalyzeAssembly, SyntaxKind.AttributeList);
         }
 
+        /// <summary>
+        /// Analyzes named types and reports diagnostics.
+        /// </summary>
         private static void AnalyzeNamedType(SymbolAnalysisContext context) {
             Diagnostic diagnostic;
 
@@ -67,15 +74,14 @@ namespace CTMAnalyzer {
                 }
 
                 // Check if a matching ModelMetatdata Assembly entry is available
-                string namespaceName = interfaceType.ContainingNamespace.Name;
-                List<(string uri, string filename)> metadata = Utilities.GetMetadata(context.Compilation.Assembly);
-                foreach ((string uri, string filename) entry in metadata) {
-                    if (entry.filename.StartsWith(namespaceName)) {
+                string namespaceName = interfaceType.ContainingNamespace.ToDisplayString();
+                List<(string uri, string resourceName)> metadata = Utilities.GetMetadata(context.Compilation.Assembly);
+                foreach ((string uri, string resourceName) in metadata) {
+                    string resourceNamespace = CTMAnylzerHelper.GetNamespace(resourceName);
+                    if (resourceNamespace.Equals(namespaceName)) {
                         return;
                     }
                 }
-
-                Debugger.Break();
 
                 diagnostic = Diagnostic.Create(
                             CTMDiagnostics.ModelInterfaceNoModelMetadataDescriptor,
@@ -85,6 +91,9 @@ namespace CTMAnalyzer {
             }
         }
 
+        /// <summary>
+        /// Analyzes properties and reports diagnostics.
+        /// </summary>
         private static void AnalyzeProperty(SymbolAnalysisContext context) {
             Diagnostic diagnostic;
 
@@ -124,6 +133,9 @@ namespace CTMAnalyzer {
 
         }
 
+        /// <summary>
+        /// Analyzes the assembly attribute list and reports diagnostics.
+        /// </summary>
         private static void AnalyzeAssembly(SyntaxNodeAnalysisContext context) {
             HashSet<string> namespaces = CTMAnylzerHelper.GetNamespaces(context.Compilation.GlobalNamespace);
             if (namespaces.IsNullOrEmpty()) {

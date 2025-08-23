@@ -5,9 +5,14 @@ using NMF.Expressions.Linq;
 using System.Collections.Immutable;
 
 namespace CTMGenerator {
+
+    /// <summary>
+    /// CodeToModel implemenation of a <see cref="IIncrementalGenerator"/>.
+    /// </summary>
     [Generator]
     public class ModelGenerator : IIncrementalGenerator {
 
+        /// <inheritdoc/>
         public void Initialize(IncrementalGeneratorInitializationContext context) {
             //Debugger.Launch();
 
@@ -36,25 +41,13 @@ namespace CTMGenerator {
                 return false;
             }
 
-            string name = ExtractName(attribute.Name);
+            string name = Utilities.ExtractName(attribute.Name);
 
             if (name is not nameof(ModelInterface) and not nameof(ModelEnum)) {
                 return false;
             }
 
             return attribute.Parent?.Parent is InterfaceDeclarationSyntax or EnumDeclarationSyntax;
-        }
-
-        /// <summary>
-        /// Tries to extracts the name from a NameSyntax node.
-        /// </summary>
-        private static string ExtractName(NameSyntax name) {
-            return name switch {
-                SimpleNameSyntax ins => ins.Identifier.Text,
-                QualifiedNameSyntax qns => qns.Right.Identifier.Text,
-                AliasQualifiedNameSyntax aqns => aqns.Name.Identifier.Text,
-                _ => name.ToString()
-            };
         }
 
         private static ITypeSymbol? GetModelParts(GeneratorSyntaxContext context, CancellationToken cancellationToken) {
@@ -83,7 +76,7 @@ namespace CTMGenerator {
             List<(string uri, string filename)> metadata = Utilities.GetMetadata(providerData.compilation.Assembly);
             Dictionary<string, ModelBuilder> models = [];
             foreach (var (uri, filename) in metadata) {
-                ModelBuilder mb = new(uri, filename);
+                ModelBuilder mb = new(uri, filename, providerData.compilation);
                 models.Add(mb.GetFullName(), mb);
             }
 

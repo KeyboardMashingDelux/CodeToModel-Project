@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <nmeta:Namespace xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Uri="http://github.com/CodeToModel" Prefix="Sentence" Name="Example" xmlns:xmi="http://www.omg.org/XMI" xmlns:nmeta="http://nmf.codeplex.com/nmeta/">
   <Types xsi:type="nmeta:Class" BaseTypes="#//Word" Name="Punctuation" />
-  <Types xsi:type="nmeta:Class" Identifier="#//Sentence/WordCount" Name="Sentence">
+  <Types xsi:type="nmeta:Class" Identifier="#//Sentence/WordCount" Name="Sentence" Summary="The public interface for Sentence">
     <References ReferenceType="nmeta:Class #//Word" IsOrdered="true" UpperBound="64" Name="Words" Summary="TEST SUMMARY" Remarks="REMARKS TEST" />
     <References ReferenceType="nmeta:Class #//Word" LowerBound="1" Name="FirstWord" />
     <Operations Name="PrintSentence">

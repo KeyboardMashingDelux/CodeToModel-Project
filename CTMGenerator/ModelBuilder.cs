@@ -16,6 +16,9 @@ using System.Diagnostics;
 
 namespace CTMGenerator {
 
+    /// <summary>
+    /// Class used for constructing models and generate source code from them.
+    /// </summary>
     public class ModelBuilder {
 
         private readonly ModelRepository ModelRepository;
@@ -32,20 +35,27 @@ namespace CTMGenerator {
 
         private readonly Dictionary<string, INamedTypeSymbol> NamespaceSymbols;
 
+        private readonly Compilation GeneratorCompilation;
 
-        public ModelBuilder(string? uri, string? filename) {
+
+
+        /// <summary>
+        /// Initalizes a basic <see cref="NMF.Models.Repository.ModelRepository"/> and <see cref="NMF.Models.Meta.Namespace"/>.
+        /// </summary>
+        /// <param name="uri">The model namespace uri.</param>
+        /// <param name="ressourceName">The full model ressource name containing at least the name, prefix and suffix of the model
+        /// with the following syntax: NAME.PREFIX.SUFFIX.</param>
+        /// <param name="generatorCompilation"><see cref="Compilation"/> needed for corretly generating source code.</param>
+        public ModelBuilder(string? uri, string? ressourceName, Compilation generatorCompilation) {
+            GeneratorCompilation = generatorCompilation;
             Uri namespaceURI = new(uri ?? ModelBuilderHelper.DefaultUri);
-            (FullName, Name, AmbientName, Prefix, Suffix) = ModelBuilderHelper.GetFilenameInfo(filename);
+            (FullName, Name, AmbientName, Prefix, Suffix) = ModelBuilderHelper.GetResourceInfo(ressourceName);
 
             ModelRepository = new ModelRepository();
             Namespace = new Namespace() {
                 Name = Name,
                 Prefix = Prefix,
-                Uri = namespaceURI,
-                Parent = null,
-                ParentNamespace = null,
-                Remarks = null,
-                Summary = null
+                Uri = namespaceURI
             };
 
             PropertyConverter = new();
@@ -58,6 +68,12 @@ namespace CTMGenerator {
             //Debugger.Launch();
         }
 
+        /// <summary>
+        /// Adds a element to the model.
+        /// <br/>
+        /// After adding all elements <see cref="CreateModel"/> has to be called!
+        /// </summary>
+        /// <param name="element"></param>
         public void AddElement(INamedTypeSymbol element) {
             NamespaceSymbols.Add(element.Name, element);
 
@@ -66,6 +82,9 @@ namespace CTMGenerator {
             }
         }
 
+        /// <summary>
+        /// Creates the model from the elements added through <see cref="AddElement"/>.
+        /// </summary>
         public void CreateModel() {
             foreach (INamedTypeSymbol namedType in NamespaceSymbols.Values) {
                 switch (namedType.TypeKind) {
@@ -183,7 +202,7 @@ namespace CTMGenerator {
         /// a non-interface name.
         /// </summary>
         public void AddBaseType(IClass classType, string? baseTypeName) {
-            if (!string.IsNullOrWhiteSpace(baseTypeName) && !baseTypeName.Equals("IModelElement")) {
+            if (!string.IsNullOrWhiteSpace(baseTypeName) && !baseTypeName!.Equals("IModelElement")) {
                 IEnumerable<IType> possibleRefType = Namespace.Types.Where((type) => type.Name.Equals(baseTypeName));
                 if (possibleRefType != null && possibleRefType.Count() == 1) {
                     if (possibleRefType.First() is IClass refClass) {
@@ -234,11 +253,15 @@ namespace CTMGenerator {
             ModelRepository.Save(Namespace, $"{OutputPath}/{Name}.{Suffix}", true);
         }
 
+        /// <summary>
+        /// Generates source code from the mode constructed with <see cref="CreateModel"/>.
+        /// </summary>
+        /// <returns>The generated source code</returns>
         public string DoCreateCode() {
             // Creates compile unit from Namespace data (Code model - Keine Datei - Sprachunabhängig
             var compileUnit = MetaFacade.CreateCode(Namespace, AmbientName);
             // Interfaces need to be removed or edited
-            compileUnit = AdaptInterfaces(compileUnit);
+            AdaptInterfaces(compileUnit);
 
             StringWriter writer = new();
             CodeGeneratorOptions options = new() {
@@ -253,7 +276,10 @@ namespace CTMGenerator {
             //return "";
         }
 
-        private CodeCompileUnit AdaptInterfaces(CodeCompileUnit ccu) {
+        /// <summary>
+        /// Removes the body or whole interface depending if the model source has them already defined or not.
+        /// </summary>
+        private void AdaptInterfaces(CodeCompileUnit ccu) {
             CodeNamespaceCollection nsCollection = ccu.Namespaces;
             foreach (CodeNamespace cn in nsCollection) {
 
@@ -262,12 +288,11 @@ namespace CTMGenerator {
 
                     CodeTypeDeclaration currentType = types[i];
                     if (currentType.IsInterface) {
-                        INamedTypeSymbol modelSymbol;
-                        if (!NamespaceSymbols.TryGetValue(currentType.Name, out modelSymbol)) {
+                        if (!NamespaceSymbols.TryGetValue(currentType.Name, out INamedTypeSymbol modelSymbol)) {
                             continue;
                         }
 
-                        if (modelSymbol.AllInterfaces.Any(baseType => baseType.Name.Equals(nameof(IModelElement)))) {
+                        if (ModelBuilderHelper.ImplementsIModelElement(modelSymbol, GeneratorCompilation)) {
                             types.RemoveAt(i);
                         }
                         else if (IsSymbolPartial(modelSymbol)) {
@@ -283,8 +308,6 @@ namespace CTMGenerator {
                     }
                 }
             }
-
-            return ccu;
         }   
         
         private bool IsSymbolPartial(INamedTypeSymbol symbol) {

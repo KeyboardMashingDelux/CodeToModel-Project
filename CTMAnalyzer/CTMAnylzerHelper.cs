@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NMF.Models;
 using NMF.Utilities;
 using System.Collections.Immutable;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace CTMAnalyzer {
 
@@ -51,6 +52,19 @@ namespace CTMAnalyzer {
             }
 
             return location;
+        }
+
+        /// <summary>
+        /// Gets the full namespace name.
+        /// </summary>
+        public static string GetNamespace(string resourceName) {
+            string[] parts = resourceName.Split('.');
+
+            if (parts.Length < 3) {
+                return resourceName;
+            }
+
+            return string.Join(".", parts.Take(parts.Length - 2));
         }
     }
 }

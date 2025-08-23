@@ -79,19 +79,12 @@ namespace CTMGenerator {
                 throw new InvalidOperationException($"Can't set reference for null! (null -> {TypeName})");
             }
 
-            // TODO Brauche Enum Referenz -> Enumeration aber keine Referenez SÄDILÖHDFÖLACJ
             if (GetRefType(types) is not null and IReferenceType refTypeAsIReference) {
                 Reference.ReferenceType = refTypeAsIReference;
                 return true;
             }
 
             return false;
-
-            // TODO Not an option
-            // Bedeutet sollte keine Referenz sein?
-            // Aber bei erzeugung kann ja nicht bekannt sein ob Teil des Modells?
-            // Im nachhinein Referenz in Attribut umwandeln?
-            //Reference.ReferenceType = (IReferenceType)GetPrimitiveType();
         }
 
         /// <summary>

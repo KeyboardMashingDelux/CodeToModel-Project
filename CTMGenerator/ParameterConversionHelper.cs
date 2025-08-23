@@ -1,8 +1,6 @@
-﻿using CTMLib;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using NMF.Models.Meta;
 using System.Collections.Immutable;
-using System.Xml.Linq;
 using Parameter = NMF.Models.Meta.Parameter;
 
 namespace CTMGenerator {
@@ -16,12 +14,13 @@ namespace CTMGenerator {
 
 
         public ParameterConversionHelper() {
-            Reset();
+            Parameters = [];
+            RefTypeInfos = [];
         }
 
         public void Reset() {
-            Parameters = [];
-            RefTypeInfos = [];
+            Parameters.Clear();
+            RefTypeInfos.Clear();
         }
 
         public void CleanConvert(ImmutableArray<IParameterSymbol> parameterSymbols) {
