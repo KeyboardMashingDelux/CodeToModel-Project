@@ -233,13 +233,21 @@ namespace CTMGenerator {
         private void CreateReferences() {
             for (int i = RefTypeInfos.Count - 1; i >= 0; i--) {
                 TypeHelper refTypeInfo = RefTypeInfos[i];
+
                 if (!refTypeInfo.SetType(Namespace.Types) && refTypeInfo.Reference != null) {
-                    IReference reference = refTypeInfo.Reference;
-                    if (reference.Parent is IClass referenceParent) {
-                        referenceParent.References.Remove(reference);
-                        referenceParent.Attributes.Add(refTypeInfo.ConvertToAttribute(reference, Namespace.Types));
+                    if (refTypeInfo.Reference.Parent is IClass referenceParent) {
+                        referenceParent.References.Remove(refTypeInfo.Reference);
+                        referenceParent.Attributes.Add(refTypeInfo.ReferenceToAttribute(Namespace.Types));
                     }
                 }
+            }
+
+            for (int i = RefTypeInfos.Count - 1; i >= 0; i--) {
+                TypeHelper refTypeInfo = RefTypeInfos[i];
+
+                refTypeInfo.SetOpposite(Namespace.Types);
+                refTypeInfo.SetRefines(Namespace.Types);
+
                 RefTypeInfos.RemoveAt(i);
             }
         }

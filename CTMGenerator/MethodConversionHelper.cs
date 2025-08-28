@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using CTMLib;
+using Microsoft.CodeAnalysis;
 using NMF.Models.Meta;
 using NMF.Utilities;
 using System.Collections.Immutable;
@@ -46,7 +47,6 @@ namespace CTMGenerator {
                     IsOrdered = IsOrdered(returnType),
                     LowerBound = GetLowerBound(methodAttributes, IsNullable(returnType) ||returnType.SpecialType == SpecialType.System_Void),
                     UpperBound = GetUpperBound(methodAttributes, isCollection),
-                    Refines = null, // TODO
                     Remarks = ModelBuilderHelper.GetElementRemarks(method),
                     Summary = ModelBuilderHelper.GetElementSummary(method)
                 };
@@ -58,7 +58,10 @@ namespace CTMGenerator {
                     else {
                         // TODO
                         string refName = (isCollection ? typeArgument : returnType).Name;
-                        RefTypeInfos.Add(new TypeHelper(operation, refName.StartsWith("I") ? refName.Substring(1) : refName));
+                        RefTypeInfos.Add(
+                            new TypeHelper(operation, 
+                                           refName.StartsWith("I") ? refName.Substring(1) : refName,
+                                           ModelBuilderHelper.GetRefinesTarget(methodAttributes)));
                     }
                 }
 

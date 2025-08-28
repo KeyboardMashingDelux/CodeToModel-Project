@@ -1,4 +1,5 @@
 ﻿using NMF.Expressions;
+using NMF.Models;
 using NMF.Models.Meta;
 using Attribute = NMF.Models.Meta.Attribute;
 
@@ -9,6 +10,8 @@ namespace CTMGenerator {
     /// </summary>
     public class TypeHelper {
 
+        public IAttribute? AttributeType {  get; private set; }
+
         public IReference? Reference { get; private set; }
 
         public IOperation? Operation { get; private set; }
@@ -17,38 +20,155 @@ namespace CTMGenerator {
 
         private readonly string TypeName;
 
+        private readonly string OppositeName;
 
+        private readonly string RefinesName;
+
+
+
+        /// <param name="attribute">Attribute which is missing a type.</param>
+        /// <param name="typeName">Name of the missing type reference. Name and System type should match.</param>
+        /// <param name="refinesName">Name of the type which refines this type.</param>
+        /// <param name="oppositeName">Name of the opposite type of this type.</param>
+        public TypeHelper(IAttribute attribute, string typeName = "", string refinesName = "", string oppositeName = "") {
+            AttributeType = attribute;
+            TypeName = typeName;
+            OppositeName = oppositeName;
+            RefinesName = refinesName;
+        }
 
         /// <param name="reference">Reference which is missing a type.</param>
         /// <param name="typeName">Name of the missing type reference. Name and System type should match.</param>
-        public TypeHelper(IReference reference, string typeName) {
+        /// <param name="refinesName">Name of the type which refines this type.</param>
+        /// <param name="oppositeName">Name of the opposite type of this type.</param>
+        public TypeHelper(IReference reference, string typeName = "", string refinesName = "", string oppositeName = "") {
             Reference = reference;
             TypeName = typeName;
+            OppositeName = oppositeName;
+            RefinesName = refinesName;
         }
 
         /// <param name="operation">Operation which is missing a type.</param>
         /// <param name="typeName">Name of the missing type reference. Name and System type should match.</param>
-        public TypeHelper(IOperation operation, string typeName) {
+        /// <param name="refinesName">Name of the type which refines this type.</param>
+        /// <param name="oppositeName">Name of the opposite type of this type.</param>
+        public TypeHelper(IOperation operation, string typeName = "", string refinesName = "", string oppositeName = "") {
             Operation = operation;
             TypeName = typeName;
+            OppositeName = oppositeName;
+            RefinesName = refinesName;
         }
 
         /// <param name="parameter">Parameter which is missing a type.</param>
         /// <param name="typeName">Name of the missing type reference. Name and System type should match.</param>
-        public TypeHelper(IParameter parameter, string typeName) {
+        /// <param name="refinesName">Name of the type which refines this type.</param>
+        /// <param name="oppositeName">Name of the opposite type of this type.</param>
+        public TypeHelper(IParameter parameter, string typeName = "", string refinesName = "", string oppositeName = "") {
             Parameter = parameter;
             TypeName = typeName;
+            OppositeName = oppositeName;
+            RefinesName = refinesName;
+        }
+
+        
+
+        public bool SetRefines(ICollectionExpression<IType> types) {
+            if (!string.IsNullOrWhiteSpace(RefinesName)) {
+                if (AttributeType != null) {
+                    return SetAttributeRefines(types);
+                }
+                else if (Reference != null) {
+                    return SetReferenceRefines(types);
+                }
+                else if (Operation != null) {
+                    return SetOperationRefines(types);
+                }
+            }
+
+            return false;
+        }
+
+        public bool SetAttributeRefines(ICollectionExpression<IType> types) {
+            if (AttributeType == null) {
+                throw new InvalidOperationException($"Can't set Attribute Refines for null! (null -> {RefinesName})");
+            }
+
+            IAttribute? refinesAttribute = GetAttribute(types);
+            if (refinesAttribute != null) {
+                if ((IsCollectionExpression(refinesAttribute)
+                    || (!refinesAttribute.IsUnique && AttributeType.IsOrdered == refinesAttribute.IsOrdered))
+                    && AttributeType.Type.Name.Equals(refinesAttribute.Type.Name)
+                    && IsBaseTypeOf(AttributeType.Parent, refinesAttribute.Parent)) {
+                    AttributeType.Refines = refinesAttribute;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool SetReferenceRefines(ICollectionExpression<IType> types) {
+            if (Reference == null) {
+                throw new InvalidOperationException($"Can't set Reference Refines for null! (null -> {RefinesName})");
+            }
+
+            IReference? refinesReference = GetReference(types, RefinesName);
+            if (refinesReference != null) {
+                if ((IsCollectionExpression(refinesReference)
+                    || (!refinesReference.IsUnique && Reference.IsOrdered == refinesReference.IsOrdered)) // TODO Ja oder Nein?
+                    && IsSubClass(Reference.ReferenceType, refinesReference.ReferenceType) // TODO unterklasse erlaubt auch außerhalb model
+                    && IsBaseTypeOf(Reference.Parent, refinesReference.Parent)) {
+                    Reference.Refines = refinesReference;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool SetOperationRefines(ICollectionExpression<IType> types) {
+            if (Operation == null) {
+                throw new InvalidOperationException($"Can't set Operation Refines for null! (null -> {RefinesName})");
+            }
+
+            IOperation? refinesOperation = GetOperation(types);
+            if (refinesOperation != null) {
+                if ((IsCollectionExpression(refinesOperation)
+                    || (!refinesOperation.IsUnique && Operation.IsOrdered == refinesOperation.IsOrdered))
+                    && IsSubClass(Operation.Type, refinesOperation.Type) // TODO unterklasse erlaubt auch außerhalb model
+                    && IsBaseTypeOf(Operation.Parent, refinesOperation.Parent)) {
+                    Operation.Refines = refinesOperation;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool SetOpposite(ICollectionExpression<IType> types) {
+            if (!string.IsNullOrWhiteSpace(OppositeName) && Reference != null) {
+                IReference? oppositeReference = GetReference(types, OppositeName);
+                if (oppositeReference is not null) {
+                    Reference.Opposite = oppositeReference;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public bool SetType(ICollectionExpression<IType> types) {
-            if (Reference != null) {
-                return SetReferenceType(types);
-            } 
-            else if (Operation != null) {
-                return SetOperationType(types);
-            }
-            else if (Parameter != null) {
-                return SetParameterType(types);
+
+            if (!string.IsNullOrWhiteSpace(TypeName)) {
+                if (Reference != null) {
+                    return SetReferenceType(types);
+                }
+                else if (Operation != null) {
+                    return SetOperationType(types);
+                }
+                else if (Parameter != null) {
+                    return SetParameterType(types);
+                }
             }
 
             return false;
@@ -59,7 +179,7 @@ namespace CTMGenerator {
                 throw new InvalidOperationException($"Can't set Operation type for null! (null -> {TypeName})");
             }
 
-            Operation.Type = GetRefType(types) ?? GetPrimitiveType();
+            Operation.Type = GetReferenceType(types) ?? GetPrimitiveType();
 
             return true;
         }
@@ -69,7 +189,7 @@ namespace CTMGenerator {
                 throw new InvalidOperationException($"Can't set Operation type for null! (null -> {TypeName})");
             }
 
-            Parameter.Type = GetRefType(types) ?? GetPrimitiveType();
+            Parameter.Type = GetReferenceType(types) ?? GetPrimitiveType();
 
             return true;
         }
@@ -79,7 +199,7 @@ namespace CTMGenerator {
                 throw new InvalidOperationException($"Can't set reference for null! (null -> {TypeName})");
             }
 
-            if (GetRefType(types) is not null and IReferenceType refTypeAsIReference) {
+            if (GetReferenceType(types) is not null and IReferenceType refTypeAsIReference) {
                 Reference.ReferenceType = refTypeAsIReference;
                 return true;
             }
@@ -88,9 +208,9 @@ namespace CTMGenerator {
         }
 
         /// <summary>
-        /// Tries to get the type by name from the given types collection.
+        /// Tries to get the <see cref="IType"/> by name from the given types collection.
         /// </summary>
-        private IType? GetRefType(ICollectionExpression<IType> types) {
+        private IType? GetReferenceType(ICollectionExpression<IType> types) {
             IEnumerable<IType>? possibleRefType = types.Where((type) => type.Name.Equals(TypeName));
             if (possibleRefType != null && possibleRefType.Count() == 1) {
                 return possibleRefType.First();
@@ -110,20 +230,107 @@ namespace CTMGenerator {
         }
 
         /// <summary>
-        /// Converts the given <see cref="IReference"/> to a <see cref="IAttribute"/> and sets its <see cref="IType"/>. 
+        /// Tries to get the <see cref="IAttribute"/> by OppositeName from the given types collection.
         /// </summary>
-        public IAttribute ConvertToAttribute(IReference reference, ICollectionExpression<IType> types) {
-            return new Attribute() {
-                Name = reference.Name,
-                IsUnique = reference.IsUnique,
-                IsOrdered = reference.IsOrdered,
-                LowerBound = reference.LowerBound,
-                UpperBound = reference.UpperBound,
-                Type = GetRefType(types) ?? GetPrimitiveType(),
-                Remarks = reference.Remarks,
-                Summary = reference.Summary,
-                Refines = null // TODO
+        private IAttribute? GetAttribute(ICollectionExpression<IType> types) {
+            foreach (IType type in types) {
+                if (type is IClass attributeParent) {
+                    foreach (IAttribute attribute in attributeParent.Attributes) {
+                        if (attribute.Name.Equals(RefinesName)) {
+                            return attribute;
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Tries to get the <see cref="IReference"/> by the given name from the given types collection.
+        /// </summary>
+        private IReference? GetReference(ICollectionExpression<IType> types, string compareName) {
+            foreach (IType type in types) {
+                if (type is IClass referenceParent) {
+                    foreach (IReference reference in referenceParent.References) {
+                        if (reference.Name.Equals(compareName)) {
+                            return reference;
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Tries to get the <see cref="IOperation"/> by RefinesName from the given types collection.
+        /// </summary>
+        private IOperation? GetOperation(ICollectionExpression<IType> types) {
+            foreach (IType type in types) {
+                if (type is IClass operationParent) {
+                    foreach (IOperation operation in operationParent.Operations) {
+                        if (operation.Name.Equals(RefinesName)) {
+                            return operation;
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private bool IsBaseTypeOf(IModelElement element, IModelElement baseElement) {
+            if (element is IClass typeClass && baseElement is IClass baseTypeClass) {
+                return typeClass.BaseTypes.Contains(baseTypeClass);
+            }
+
+            return false;
+        }
+
+        private bool IsSubClass(IModelElement subClass, IModelElement baseClass) {
+            IModelElement currentClass = subClass;
+            while (currentClass != null && baseClass != null) {
+                if (currentClass.ClassName.Equals(baseClass.ClassName)) {
+                    return true;
+                }
+                currentClass = currentClass.Parent;
+            }
+
+            return false;
+        }
+
+        private bool IsCollectionExpression(ITypedElement element) {
+            if (element.UpperBound > 1 && !element.IsUnique && !element.IsOrdered) {
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Converts this <see cref="IReference"/> to a <see cref="IAttribute"/> and sets its <see cref="IType"/>. 
+        /// </summary>
+        public IAttribute ReferenceToAttribute(ICollectionExpression<IType> types) {
+            if (Reference == null) {
+                throw new InvalidOperationException($"Reference was null! Can't convert null to Attribute!");
+            }
+
+            IAttribute convertedAttribute = new Attribute() {
+                Name = Reference.Name,
+                IsUnique = Reference.IsUnique,
+                IsOrdered = Reference.IsOrdered,
+                LowerBound = Reference.LowerBound,
+                UpperBound = Reference.UpperBound,
+                Type = GetReferenceType(types) ?? GetPrimitiveType(),
+                Remarks = Reference.Remarks,
+                Summary = Reference.Summary
             };
+
+            Reference = null;
+            AttributeType = convertedAttribute;
+
+            return convertedAttribute;
         }
     }
 }

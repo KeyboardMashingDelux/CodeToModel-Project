@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis;
 using NMF.Models;
 using NMF.Models.Meta;
 using System.Collections.Immutable;
+using System.Reflection;
 using Attribute = NMF.Models.Meta.Attribute;
 
 namespace CTMGenerator {
@@ -13,7 +14,6 @@ namespace CTMGenerator {
         public List<IAttribute> Attributes { get; private set; }
         public IAttribute? IdAttribute { get; private set; }
         public List<TypeHelper> RefTypeInfos { get; private set; }
-        public Dictionary<string, IReference> Opposites { get; private set; }
 
 
 
@@ -22,7 +22,6 @@ namespace CTMGenerator {
             Attributes = [];
             IdAttribute = null;
             RefTypeInfos = [];
-            Opposites = [];
         }
 
         public void Reset() {
@@ -30,7 +29,6 @@ namespace CTMGenerator {
             Attributes.Clear();
             IdAttribute = null;
             RefTypeInfos.Clear();
-            Opposites.Clear();
         }
 
         public void CleanConvert(List<IPropertySymbol> properties) { 
@@ -67,12 +65,13 @@ namespace CTMGenerator {
                         Type = GetPrimitiveType(isCollection ? typeArgumentSpecialType : specialType),
                         Remarks = ModelBuilderHelper.GetElementRemarks(property),
                         Summary = ModelBuilderHelper.GetElementSummary(property),
-                        Refines = null // TODO
                     };
 
                     if (Utilities.GetAttributeByName(propertyAttributes, nameof(IdAttribute)) != null) {
                         IdAttribute = attribute;
                     }
+
+                    RefTypeInfos.Add(new TypeHelper(attribute, refinesName: ModelBuilderHelper.GetRefinesTarget(propertyAttributes)));
 
                     Attributes.Add(attribute);
                 }
@@ -89,34 +88,20 @@ namespace CTMGenerator {
                         UpperBound = GetUpperBound(propertyAttributes, isCollection),
                         IsContainment = Utilities.GetAttributeByName(propertyAttributes, nameof(ContainmentAttribute)) != null,
                         Remarks = ModelBuilderHelper.GetElementRemarks(property),
-                        Summary = ModelBuilderHelper.GetElementSummary(property),
-                        Refines = null // TODO
+                        Summary = ModelBuilderHelper.GetElementSummary(property)
                     };
 
                     // TODO Assumes the ref is a model interface - What if just a normal Object?
                     string refName = (isCollection ? typeArgument : type).Name;
-                    RefTypeInfos.Add(new TypeHelper(reference, refName.StartsWith("I") ? refName.Substring(1) : refName));
+                    RefTypeInfos.Add(
+                        new TypeHelper(reference, 
+                                       refName.StartsWith("I") ? refName.Substring(1) : refName,
+                                       ModelBuilderHelper.GetRefinesTarget(propertyAttributes),
+                                       ModelBuilderHelper.GetSecondString(propertyAttributes, nameof(OppositeAttribute)) ?? ""));
 
                     References.Add(reference);
-
-                    string? oppositeName = ModelBuilderHelper.GetSecondString(propertyAttributes, nameof(OppositeAttribute));
-                    if (oppositeName != null) {
-                        Opposites.Add(oppositeName, reference);
-                    }
                 }
             }
-
-            // TODO Kann opposite in anderem Interface sein? -> Ja
-            // Wie refernzen später machen
-            //foreach (var opposite in opposites) {
-            //    string oppositeName = opposite.Key;
-            //    IReference thisRef = opposite.Value;
-
-            //    if (opposites.ContainsKey(thisRef.Name)) {
-            //        IReference oppositeRef = opposites[thisRef.Name];
-            //        thisRef.Opposite = oppositeRef;
-            //    }
-            //}
         }
     }
 }

@@ -71,6 +71,14 @@ namespace CTMGenerator {
         }
 
         /// <summary>
+        /// Helper method, calls <see cref="GetFirstString"/> with the name of the <see cref="Refines"/> attribute.
+        /// </summary>
+        /// <returns>An empty string instead of <see langword="null"/> or the <see cref="Refines"/> attribute target.</returns>
+        public static string GetRefinesTarget(ImmutableArray<AttributeData> attributes) {
+            return GetFirstString(attributes, nameof(Refines)) ?? "";
+        }
+
+        /// <summary>
         /// Retrieves the <see cref="IdentifierScope"/> of the <see cref="IdentifierScopeAttribute"/>.
         /// </summary>
         /// <returns><see cref="IdentifierScope"/> or <see langword="null"/> if this attribute does not exist</returns>
