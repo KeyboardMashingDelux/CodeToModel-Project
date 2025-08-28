@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis;
 using NMF.Models;
 using NMF.Models.Meta;
 using System.Collections.Immutable;
-using System.Reflection;
 using Attribute = NMF.Models.Meta.Attribute;
 
 namespace CTMGenerator {
@@ -44,8 +43,6 @@ namespace CTMGenerator {
                 if (!IsXExpression(property.Type) && type.IsGenericType && !isNullableType) {
                     continue;
                 }
-
-                // TODO Kommen Listen von Listen durch? Wenn ja dafür sorgen, dass übersprungen wird
 
                 ITypeSymbol typeArgument = GetTypeArgument(type) ?? type;
                 bool isCollection = !SymbolEqualityComparer.Default.Equals(type, typeArgument) && !isNullableType;
@@ -91,15 +88,18 @@ namespace CTMGenerator {
                         Summary = ModelBuilderHelper.GetElementSummary(property)
                     };
 
-                    // TODO Assumes the ref is a model interface - What if just a normal Object?
                     string refName = (isCollection ? typeArgument : type).Name;
                     RefTypeInfos.Add(
                         new TypeHelper(reference, 
-                                       refName.StartsWith("I") ? refName.Substring(1) : refName,
+                                       refName,
                                        ModelBuilderHelper.GetRefinesTarget(propertyAttributes),
-                                       ModelBuilderHelper.GetSecondString(propertyAttributes, nameof(OppositeAttribute)) ?? ""));
+                                       Utilities.GetSecondString(propertyAttributes, nameof(OppositeAttribute)) ?? ""));
 
                     References.Add(reference);
+
+                    if (IdAttribute == null && Utilities.GetAttributeByName(propertyAttributes, nameof(IdAttribute)) != null) {
+                        IdAttribute = new Attribute() { Name = Utilities.REFIDATTRIBUTE + reference.Name };
+                    }
                 }
             }
         }

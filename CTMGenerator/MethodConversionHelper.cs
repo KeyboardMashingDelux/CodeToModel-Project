@@ -1,5 +1,4 @@
-﻿using CTMLib;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using NMF.Models.Meta;
 using NMF.Utilities;
 using System.Collections.Immutable;
@@ -56,11 +55,10 @@ namespace CTMGenerator {
                         operation.Type = GetPrimitiveType(specialType);
                     }
                     else {
-                        // TODO
                         string refName = (isCollection ? typeArgument : returnType).Name;
                         RefTypeInfos.Add(
                             new TypeHelper(operation, 
-                                           refName.StartsWith("I") ? refName.Substring(1) : refName,
+                                           refName,
                                            ModelBuilderHelper.GetRefinesTarget(methodAttributes)));
                     }
                 }

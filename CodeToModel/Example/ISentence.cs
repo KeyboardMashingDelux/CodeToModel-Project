@@ -2,11 +2,12 @@
 using NMF.Models;
 using NMF.Expressions;
 
-// Voller Namespace in Attribut -> Analyzer Information möglich (Gibt es irgendwo im Project eine Namespace dieses Namens?)?
-// Wenn ModelInterface Attribut vorhanden -> Gibt es Assembly ModelMetadata
 [assembly: ModelMetadata("http://github.com/CodeToModel", "CodeToModel.Example.Sentence.nmeta")]
 
-//[assembly: ModelMetadata("http://github.com/CodeToModel", "TEST.ANALYZER.ASSEMBLY.UNESCESSARY.nmeta")]
+//[assembly: ModelMetadata("http://github.com/CodeToModel", "TEST.ASSEMBLY.ANALYZER.UNESCESSARY.nmeta")]
+
+//[assembly: ModelMetadata("http://github.com/CodeToModel", "FAIL")]
+
 
 namespace CodeToModel.Example {
 
@@ -26,10 +27,6 @@ namespace CodeToModel.Example {
         public IListExpression<IWord> Words { get; }
         // Analyzer -> XExpressio = Kein set nur get
 
-        // TODO Für Enumerationen:
-        // TODO Bei bereits vorhandener = Primitiver Typ erzeugen
-        // TODO Bei eigener als model element & Reference erzeugen -> Neues Enum Attribut ModelEnum
-        // -=> GEHT ABER NICHT ???
         public ISetExpression<SentenceTypes> SentenceTypes { get; }
 
         public SentenceTypes MainSentenceType { get; set; }
@@ -37,11 +34,20 @@ namespace CodeToModel.Example {
         public IWord FirstWord { get; set; }
         // Analyzer -> Keine XExpressio = Unbedingt set & get
 
-        [Id]
         public int? WordCount { get; set; }
 
+        /// <summary>
+        /// PRINTING WAT ELSE
+        /// </summary>
+        /// <param name="times"><remarks>REMARKS?</remarks>>SOEMTHING ELSE?</param>
+        /// <param name="seperator"><summary>SUMMARY?</summary>NOTHING ELSE?</param>
         public void PrintSentence(int times, IWord seperator);
 
         public IWord WordsAsURI();
+
+        [Id]
+        public Exception SomeNotPrimitivId { get; set; }
+
+        public IFormattable InterfaceNotFromModel { get; set; }
     }
 }

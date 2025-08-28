@@ -64,8 +64,6 @@ namespace CTMGenerator {
 
             RefTypeInfos = [];
             NamespaceSymbols = [];
-
-            //Debugger.Launch();
         }
 
         /// <summary>
@@ -161,7 +159,7 @@ namespace CTMGenerator {
                 ImmutableArray<AttributeData> classAttributes = classElement.GetAttributes();
 
                 // Add instanceof IClass
-                string? instanceOfClassName = ModelBuilderHelper.GetFirstString(classAttributes, nameof(InstanceOfAttribute));
+                string? instanceOfClassName = Utilities.GetFirstString(classAttributes, nameof(InstanceOfAttribute));
                 if (GetTypeByName(instanceOfClassName) is IClass instanceOfClass) {
                     classType.InstanceOf = instanceOfClass;
                 }
@@ -189,7 +187,6 @@ namespace CTMGenerator {
 
 
                 // Add identifier
-                // TODO Was wenn Referenz die zu Attribut wird?
                 classType.Identifier = PropertyConverter.IdAttribute;
             }
         }
@@ -221,6 +218,9 @@ namespace CTMGenerator {
                     if (type.Name.Equals(name)) {
                         return type;
                     }
+                    else if (Utilities.IsValidInterfaceName(name!) && type.Name.Equals(name!.Substring(1))) {
+                        return type;
+                    }
                 }
             }
 
@@ -237,7 +237,13 @@ namespace CTMGenerator {
                 if (!refTypeInfo.SetType(Namespace.Types) && refTypeInfo.Reference != null) {
                     if (refTypeInfo.Reference.Parent is IClass referenceParent) {
                         referenceParent.References.Remove(refTypeInfo.Reference);
-                        referenceParent.Attributes.Add(refTypeInfo.ReferenceToAttribute(Namespace.Types));
+                        IAttribute convertedReference = refTypeInfo.ReferenceToAttribute(Namespace.Types);
+                        referenceParent.Attributes.Add(convertedReference);
+                        if (referenceParent.Identifier != null 
+                            && referenceParent.Identifier.Name.EndsWith(convertedReference.Name)
+                            && referenceParent.Identifier.Name.StartsWith(Utilities.REFIDATTRIBUTE)) {
+                            referenceParent.Identifier = convertedReference;
+                        }
                     }
                 }
             }
@@ -258,14 +264,20 @@ namespace CTMGenerator {
         /// </summary>
         /// <exception cref="InvalidOperationException"></exception>
         public void DoSave() {
-            ModelRepository.Save(Namespace, $"{OutputPath}/{Name}.{Suffix}", true);
+            if (!string.IsNullOrWhiteSpace(OutputPath)) {
+                ModelRepository.Save(Namespace, $"{OutputPath}/{Name}.{Suffix}", true);
+            }
         }
 
         /// <summary>
-        /// Generates source code from the mode constructed with <see cref="CreateModel"/>.
+        /// Generates source code from the model constructed with <see cref="CreateModel"/>.
         /// </summary>
         /// <returns>The generated source code</returns>
         public string DoCreateCode() {
+            if (string.IsNullOrWhiteSpace(OutputPath)) {
+                return "";
+            }
+
             // Creates compile unit from Namespace data (Code model - Keine Datei - Sprachunabhängig
             var compileUnit = MetaFacade.CreateCode(Namespace, AmbientName);
             // Interfaces need to be removed or edited
@@ -324,6 +336,10 @@ namespace CTMGenerator {
                             .GetSyntax())
                             .OfType<InterfaceDeclarationSyntax>()
                             .Any(declaration => declaration.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.PartialKeyword)));
+        }
+
+        public void SetOutputPath(string? outputPath) {
+            OutputPath = outputPath;
         }
 
         public string GetName() {

@@ -62,5 +62,44 @@ namespace CTMAnalyzer {
             defaultSeverity: DiagnosticSeverity.Error,
             isEnabledByDefault: true);
 
+        public static readonly DiagnosticDescriptor ModelMetadataResourceNameParts = new(
+            id: "CTM008",
+            title: "ModelMetadata resource name should consist of 3 parts (NAME.PREFIX.SUFFIX)",
+            messageFormat: "ModelMetadata assembly entry {0} does not consist of 3 parts",
+            category: Category,
+            defaultSeverity: DiagnosticSeverity.Error,
+            isEnabledByDefault: true);
+
+        public static readonly DiagnosticDescriptor InstanceOfValid = new(
+            id: "CTM009",
+            title: "InstanceOf value not valid",
+            messageFormat: "InstanceOf type name {0} could not be found in this namespace",
+            category: Category,
+            defaultSeverity: DiagnosticSeverity.Warning,
+            isEnabledByDefault: true);
+
+        public static readonly DiagnosticDescriptor BaseTypeNotModelElement = new(
+            id: "CTM010",
+            title: "Base type not part of this model - may need to be added manually",
+            messageFormat: "Base type {0} was not found in this namespaces source or was not annotated with IModelInterface",
+            category: Category,
+            defaultSeverity: DiagnosticSeverity.Warning,
+            isEnabledByDefault: true);
+
+        public static readonly DiagnosticDescriptor GetSetNeeded = new(
+            id: "CTM011",
+            title: "Get and Set needed for non collection properties",
+            messageFormat: "Property {0} needs to have get and set",
+            category: Category,
+            defaultSeverity: DiagnosticSeverity.Error,
+            isEnabledByDefault: true);
+
+        public static readonly DiagnosticDescriptor GetOnlyNeeded = new(
+            id: "CTM012",
+            title: "Get only needed for collection properties",
+            messageFormat: "Property {0} needs to have only get",
+            category: Category,
+            defaultSeverity: DiagnosticSeverity.Error,
+            isEnabledByDefault: true);
     }
 }

@@ -3,6 +3,8 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NMF.Expressions.Linq;
 using System.Collections.Immutable;
+using System.Diagnostics;
+using System.Xml.Linq;
 
 namespace CTMGenerator {
 
@@ -14,26 +16,26 @@ namespace CTMGenerator {
 
         /// <inheritdoc/>
         public void Initialize(IncrementalGeneratorInitializationContext context) {
-            //Debugger.Launch();
-
-            // Möglich Werte aus AdditionalFiles zu erhalten -> Anstatt einzelner RegisterSourceOutput einfach per Combine mit modelParts kombinieren
-            // 
-            //var pro = context.AnalyzerConfigOptionsProvider.Select((provider, ct) => 
-            //        provider.GlobalOptions.TryGetValue("build_property.CompilerGeneratedFilesOutputPath", out var compilerGeneratedFilesOutputPath)
-            //        ? compilerGeneratedFilesOutputPath : "NOPE");
-            //context.RegisterSourceOutput(pro, (ctx, value) =>
-            //{
-            //    Debug.WriteLine("#####------##########" + value);
-            //});
-
-            //Debug.WriteLine("#####------##########" + CompilerGeneratedFilesOutputPath);
-
             var modelParts = context.SyntaxProvider.CreateSyntaxProvider(IsModelPart, GetModelParts).Where(type => type is not null).Collect();
 
             var compilation = context.CompilationProvider.Select((compilation, ct) => compilation);
 
-            var fullProvider = modelParts.Combine(compilation);
+            var outputPaths = context.AdditionalTextsProvider
+                           .Where(text => text.Path.EndsWith("OutputPaths.xml", StringComparison.OrdinalIgnoreCase))
+                           .Select((text, token) => SafeParseXML(text.GetText(token)?.ToString()))
+                           .Where(text => text is not null)!
+                           .Collect<XDocument>();
+
+            var fullProvider = modelParts.Combine(compilation).Combine(outputPaths);
             context.RegisterSourceOutput(fullProvider, action: GenerateCode);
+        }
+
+        private static XDocument? SafeParseXML(string? xml) {
+            if (string.IsNullOrWhiteSpace(xml)) {
+                return null;
+            }
+
+            return XDocument.Parse(xml);
         }
 
         private static bool IsModelPart(SyntaxNode syntaxNode, CancellationToken cancellationToken) {
@@ -69,19 +71,23 @@ namespace CTMGenerator {
         }
 
         private static void GenerateCode(SourceProductionContext context,
-                (ImmutableArray<ITypeSymbol?> elements, Compilation compilation) providerData) {
-            if (providerData.elements.IsDefaultOrEmpty)
+                ((ImmutableArray<ITypeSymbol?> elements, Compilation compilation) builderParts,
+                     ImmutableArray<XDocument> outputPaths) providerData) {
+            var (elements, compilation) = providerData.builderParts;
+            if (elements.IsDefaultOrEmpty) { 
                 return;
+            }
 
-            List<(string uri, string filename)> metadata = Utilities.GetMetadata(providerData.compilation.Assembly);
+            List<(string uri, string filename)> metadata = Utilities.GetMetadata(compilation.Assembly);
             Dictionary<string, ModelBuilder> models = [];
             foreach (var (uri, filename) in metadata) {
-                ModelBuilder mb = new(uri, filename, providerData.compilation);
+                ModelBuilder mb = new(uri, filename, compilation);
+                mb.SetOutputPath(GetOutputPathForNamespace(providerData.outputPaths, mb.GetFullName()));
                 models.Add(mb.GetFullName(), mb);
             }
 
 
-            foreach (INamedTypeSymbol element in providerData.elements.OfType<INamedTypeSymbol>()) {
+            foreach (INamedTypeSymbol element in elements.OfType<INamedTypeSymbol>()) {
                 if (element == null) {
                     continue;
                 }
@@ -103,119 +109,19 @@ namespace CTMGenerator {
             }
         }
 
-//        private static void GenerateModel(SourceProductionContext context,
-//            (ImmutableArray<ITypeSymbol?> elements, IAssemblySymbol assembly) providerData) {
-//            if (providerData.elements.IsDefaultOrEmpty)
-//                return;
+        private static string? GetOutputPathForNamespace(ImmutableArray<XDocument> outputPaths, string ns) {
+            foreach (var outputPath in outputPaths) {
+                foreach(XElement element in outputPath.Root.Elements()) {
+                    if (element.Name.LocalName.Equals("path", StringComparison.OrdinalIgnoreCase)) {
+                        string elementNamespace = element.Attribute("namespace").Value;
+                        if (elementNamespace.Equals(ns) || elementNamespace.Equals("ALL", StringComparison.OrdinalIgnoreCase)) {
+                            return element.Value.Trim();
+                        }
+                    }
+                }
+            }
 
-//            // Get all of the assembly options
-//            // For each namespace create new builder 
-//            // Add classes only to namespace which matches filename defined namespace
-//            var (uri, filename) = GetMetadata(providerData.assembly);
-//            ModelBuilder mb = new();
-//            mb.Initalize(uri, filename);
-
-//            foreach (var element in providerData.elements) {
-//                if (element == null)
-//                    continue;
-
-//                // Check for namespace of element
-//                mb.AddElement(element);
-
-//                var ns = element.ContainingNamespace.IsGlobalNamespace
-//                          ? null
-//                          : element.ContainingNamespace.ToString();
-//                var name = element.Name;
-//                var className = name.Substring(1);
-//                var inheritance = GetInheritance(element);
-
-//                var members = element.GetMembers();
-//                var (variables, methodes, events) = GetClassMembers(members);
-
-
-//                var code = @$"// <auto-generated />
-
-//{(ns is null ? null : $@"namespace {ns} {{")}
-//   public partial class {className} : {(string.IsNullOrWhiteSpace(inheritance) ? null : inheritance + ",")} {name} {{
-
-//        {String.Join("\n\t", variables)}
-
-//        {String.Join("\n\t", methodes)}
-
-//        {String.Join("\n\t", events)}
-//      }}
-//{(ns is null ? null : @"}
-//")}";
-//                ;
-
-//                context.AddSource($"{className}.g.cs", code);
-//            }
-
-//            mb.DoSave();
-//            //context.AddSource($"{mb.name}.g.cs", mb.DoCreateCode());
-//        }
-
-        //private static string GetInheritance(ITypeSymbol element) {
-        //    var interfaces = element.Interfaces;
-        //    List<string> inheritance = [];
-        //    foreach (var interfaceSymbol in interfaces) {
-        //        var interfaceAttributes = interfaceSymbol.GetAttributes();
-        //        if (interfaceAttributes.Any(a => Utilities.IsLibAttributeClass(a.AttributeClass, nameof(ModelInterface)))) {
-        //            inheritance.Add(interfaceSymbol.Name.Substring(1));
-        //        }
-        //    }
-
-        //    return String.Join(",", inheritance);
-        //}
-
-        //private static (List<string> variables, List<string> methodes, List<string> events) GetClassMembers(ImmutableArray<ISymbol> members) {
-        //    List<string> variables = [];
-        //    List<string> methodes = [];
-        //    List<string> events = [];
-
-        //    string visibility = "";
-        //    string type = "";
-        //    string memberName = "";
-
-        //    foreach (var member in members) {
-        //        switch (member) {
-        //            case IPropertySymbol property:
-        //                visibility = GetAccessibility(property.DeclaredAccessibility);
-        //                type = property.Type.ToDisplayString();
-        //                memberName = property.Name;
-
-        //                variables.Add($"private {type} _{memberName};");
-        //                // TODO has to check accessor with property.GetMethod; property.SetMethod;
-        //                methodes.Add($"{visibility} {type} {memberName} {{ get {{ return this._{memberName}; }} }}");
-        //                break;
-
-        //            case IMethodSymbol method when method.MethodKind == MethodKind.Ordinary:
-        //                visibility = GetAccessibility(method.DeclaredAccessibility);
-        //                type = method.ReturnType.ToDisplayString();
-        //                memberName = method.Name;
-
-        //                methodes.Add($"{visibility} {type} {memberName} {{ }}");
-        //                break;
-
-        //            case IEventSymbol eventMember:
-        //                visibility = GetAccessibility(eventMember.DeclaredAccessibility);
-        //                type = eventMember.Type.ToDisplayString();
-        //                memberName = eventMember.Name;
-
-        //                events.Add($"{visibility} event {type} {memberName};");
-        //                break;
-
-        //            // Skip accessors (get/set/add/remove)
-        //            default:
-        //                continue;
-        //        }
-        //    }
-
-        //    return (variables, methodes, events);
-        //}
-
-        //private static string GetAccessibility(Accessibility accessibility) {
-        //    return accessibility == Accessibility.NotApplicable ? "" : accessibility.ToString().ToLower();
-        //}
+            return null;
+        }
     }
 }

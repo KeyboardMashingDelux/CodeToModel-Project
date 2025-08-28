@@ -5,9 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NMF.Models;
 using NMF.Models.Meta;
 using NMF.Models.Repository;
-using NMF.Transformations.Core;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Xml.Linq;
 
 namespace CTMGenerator {
@@ -47,35 +45,11 @@ namespace CTMGenerator {
         }
 
         /// <summary>
-        /// Retrievs the attribute from the given list by name.
-        /// </summary>
-        /// <param name="index">Represents the strings constructor index</param>
-        public static string? GetAttributeString(ImmutableArray<AttributeData> attributes, string attributeName, int index) {
-            var attribute = Utilities.GetAttributeByName(attributes, attributeName);
-            var ca = attribute?.ConstructorArguments;
-            return ca?[index].Value?.ToString();
-        }
-
-        /// <summary>
-        /// Helper method, calls <see cref="GetAttributeString"/> with index 0.
-        /// </summary>
-        public static string? GetFirstString(ImmutableArray<AttributeData> attributes, string attributeName) {
-            return GetAttributeString(attributes, attributeName, 0);
-        }
-
-        /// <summary>
-        /// Helper method, calls <see cref="GetAttributeString"/> with index 1.
-        /// </summary>
-        public static string? GetSecondString(ImmutableArray<AttributeData> attributes, string attributeName) {
-            return GetAttributeString(attributes, attributeName, 1);
-        }
-
-        /// <summary>
         /// Helper method, calls <see cref="GetFirstString"/> with the name of the <see cref="Refines"/> attribute.
         /// </summary>
         /// <returns>An empty string instead of <see langword="null"/> or the <see cref="Refines"/> attribute target.</returns>
         public static string GetRefinesTarget(ImmutableArray<AttributeData> attributes) {
-            return GetFirstString(attributes, nameof(Refines)) ?? "";
+            return Utilities.GetFirstString(attributes, nameof(Refines)) ?? "";
         }
 
         /// <summary>
@@ -153,8 +127,6 @@ namespace CTMGenerator {
             }
 
             string[] parts = resourceName.Split('.');
-
-            // TODO Analyzer bedingung hinzufügen
             int length = parts.Length;
             if (length < 3) {
                 return GetResourceInfo(DefaultResourceName);

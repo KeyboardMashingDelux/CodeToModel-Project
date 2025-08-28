@@ -13,6 +13,10 @@
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<AdditionalFiles Include="OutputPaths.xml" />
+	</ItemGroup>
+
 	<!--<ItemGroup>
 		<Compile Remove="Generated\CTMGenerator\CTMGenerator.ModelGenerator\*" />
 	</ItemGroup>-->
@@ -37,6 +41,7 @@
 
 	<ItemGroup>
 	  <Folder Include="Generated\CTMGenerator\CTMGenerator.ModelGenerator\" />
+	  <Folder Include="Models\" />
 	</ItemGroup>
 
 </Project>

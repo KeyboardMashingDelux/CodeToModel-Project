@@ -2,6 +2,8 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using NMF.Collections.Generic;
+using NMF.Expressions;
 using NMF.Models;
 using NMF.Utilities;
 using System.Collections.Immutable;
@@ -65,6 +67,28 @@ namespace CTMAnalyzer {
             }
 
             return string.Join(".", parts.Take(parts.Length - 2));
+        }
+
+        /// <summary>
+        /// Checks if the given list of <see cref="INamedTypeSymbol"/> has a member by name.
+        /// </summary>
+        /// <returns><see langword="true"/> if a member of this name was found, otherwise <see langword="false"/>./returns>
+        public static bool HasMember(ImmutableArray<INamedTypeSymbol> members, string memberName) {
+            foreach (INamedTypeSymbol member in members) {
+                if (member.Name == memberName) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static bool IsCollection(ITypeSymbol type) {
+            string typeName = type.Name;
+            return typeName.Equals(nameof(IListExpression<int>))
+                || typeName.Equals(nameof(ISetExpression<int>))
+                || typeName.Equals(nameof(IOrderedSetExpression<int>))
+                || typeName.Equals(nameof(ICollectionExpression<int>));
         }
     }
 }

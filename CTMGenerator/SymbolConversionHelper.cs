@@ -81,7 +81,7 @@ namespace CTMGenerator {
                 case SpecialType.System_Double:
                 case SpecialType.System_Single:
                 case SpecialType.System_String:
-                case SpecialType.System_Object: // Don't use?
+                case SpecialType.System_Object:
                     return true;
                 default:
                     return false;

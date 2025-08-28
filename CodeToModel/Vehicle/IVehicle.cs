@@ -10,28 +10,19 @@ namespace CodeToModel.Vehicle {
     [ModelInterface]
     public interface IVehicle : IModelElement {
 
-        // Wenn Refined wird dann darf nicht unique sein (ISetExpression oder IOrderedSet)
-        IListExpression<IWheel> Wheels { get; } // Referenz -> Refines = null
+        IListExpression<IWheel> Wheels { get; }
 
-        public ICollectionExpression<ILight> Lights(); // Referenz -> Refines = null
+        public ICollectionExpression<ILight> Lights();
     }
 
     [ModelInterface]
     public interface IBicylce : IVehicle, IModelElement {
 
-        // TODO Neues Attribut: [Refines(nameof(BasisClass.attribut/refernz/operation))]
-        // -> Attribut muss auf Attribut, Ref auf Ref, Op auf Op
-        // -> MUSS aus basis Klasse kommen
-        // -> Attr -> Gleicher Type, ander multiplizität möglich (List<strin> kann string werden) -> Basis darf auch nicht unique sein
-        // -> Ref -> Gleicher Type oder unterklasse, ander multiplizität
-        // -> Op -> Wie Attr und Ref
-
-        // Analyzer: IBikeWheel muss IWheel inteface als BaseType haben oder gleich sein
         [Refines(nameof(Wheels))]
-        IBikeWheel FrontWheel { get; set; } // Referenz -> Refines = wheelsModelElement
+        IBikeWheel FrontWheel { get; set; }
 
         [Refines(nameof(Wheels))]
-        IBikeWheel RearWheel { get; set; } // Referenz -> Refines = wheelsModelElement
+        IBikeWheel RearWheel { get; set; } 
 
         // Geht weil IOrderedSetExpression auch Ordered -> ISetExpression ist nicht Ordered
         // Wenn wheels ICollectionExpression -> Dann kann alle Expression sein

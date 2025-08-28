@@ -21,6 +21,11 @@ namespace CTMLib {
         /// </summary>
         public const string REMARKS = "remarks";
 
+        /// <summary>
+        /// Identifier for a reference which is marked as id attribute.
+        /// </summary>
+        public const string REFIDATTRIBUTE = "R3F1DATTr1but3-/$§)$=JKLDJSD)?9DLJKLAS(";
+
 
 
         /// <summary>
@@ -118,6 +123,30 @@ namespace CTMLib {
         /// <returns><see langword="true"/> if the interface name is valid.</returns>
         public static bool IsValidInterfaceName(string interfaceName) {
             return interfaceName.StartsWith("I") && interfaceName.Length >= 2 && char.IsUpper(interfaceName[1]);
+        }
+
+        /// <summary>
+        /// Retrievs the attribute from the given list by name.
+        /// </summary>
+        /// <param name="index">Represents the strings constructor index</param>
+        public static string? GetAttributeString(ImmutableArray<AttributeData> attributes, string attributeName, int index) {
+            var attribute = Utilities.GetAttributeByName(attributes, attributeName);
+            var ca = attribute?.ConstructorArguments;
+            return ca?[index].Value?.ToString();
+        }
+
+        /// <summary>
+        /// Helper method, calls <see cref="GetAttributeString"/> with index 0.
+        /// </summary>
+        public static string? GetFirstString(ImmutableArray<AttributeData> attributes, string attributeName) {
+            return GetAttributeString(attributes, attributeName, 0);
+        }
+
+        /// <summary>
+        /// Helper method, calls <see cref="GetAttributeString"/> with index 1.
+        /// </summary>
+        public static string? GetSecondString(ImmutableArray<AttributeData> attributes, string attributeName) {
+            return GetAttributeString(attributes, attributeName, 1);
         }
     }
 }

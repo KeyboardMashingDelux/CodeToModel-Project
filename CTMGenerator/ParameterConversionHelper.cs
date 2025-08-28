@@ -58,7 +58,7 @@ namespace CTMGenerator {
                 }
                 else {
                     string refName = (isCollection ? typeArgument : type).Name;
-                    RefTypeInfos.Add(new TypeHelper(parameter, refName.StartsWith("I") ? refName.Substring(1) : refName));
+                    RefTypeInfos.Add(new TypeHelper(parameter, refName));
                 }
 
                     Parameters.Add(parameter);

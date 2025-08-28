@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using CTMLib;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -6,7 +7,9 @@ using NMF.Models;
 using NMF.Utilities;
 using System.Collections;
 using System.Collections.Immutable;
-using CTMLib;
+using System.Diagnostics;
+using System.Reflection.Metadata;
+using System.Xml.Linq;
 
 namespace CTMAnalyzer {
 
@@ -25,7 +28,12 @@ namespace CTMAnalyzer {
                 CTMDiagnostics.RequiredModelInterfaceKeyword,
                 CTMDiagnostics.IListExpressionInstead,
                 CTMDiagnostics.ISetExpressionInstead,
-                CTMDiagnostics.IOrderedSetExpressionInstead);
+                CTMDiagnostics.IOrderedSetExpressionInstead,
+                CTMDiagnostics.ModelMetadataResourceNameParts,
+                CTMDiagnostics.InstanceOfValid,
+                CTMDiagnostics.BaseTypeNotModelElement,
+                CTMDiagnostics.GetSetNeeded,
+                CTMDiagnostics.GetOnlyNeeded);
 
 
         /// <inheritdoc/>
@@ -71,6 +79,45 @@ namespace CTMAnalyzer {
                                     interfaceDeclaration.Identifier.GetLocation(),
                                     interfaceName);
                     context.ReportDiagnostic(diagnostic);
+                }
+
+                // Check instanceof attribute
+                string? instanceOfValue = Utilities.GetFirstString(interfaceType.GetAttributes(), nameof(InstanceOfAttribute));
+                if (instanceOfValue != null) {
+                    if (!CTMAnylzerHelper.HasMember(interfaceType.ContainingNamespace.GetTypeMembers(), instanceOfValue)) {
+                        diagnostic = Diagnostic.Create(
+                            CTMDiagnostics.InstanceOfValid,
+                            interfaceDeclaration.GetLocation(),
+                            instanceOfValue);
+                        context.ReportDiagnostic(diagnostic);
+                    }
+                }
+
+                // Check base types
+                BaseListSyntax? baseList = interfaceDeclaration.BaseList;
+                if (baseList != null) {
+                    foreach (BaseTypeSyntax baseType in baseList.Types) {
+                        TypeSyntax typeSyntax = baseType.Type;
+                        string typeName;
+                        if (typeSyntax is NameSyntax nameSyntax) {
+                            typeName = Utilities.ExtractName(nameSyntax);
+                        }
+                        else {
+                            typeName = typeSyntax.ToString();
+                        }
+
+                        if (typeName.Equals(nameof(IModelElement))) {
+                            continue;
+                        }
+
+                        if (!CTMAnylzerHelper.HasMember(interfaceType.ContainingNamespace.GetTypeMembers(), typeName)) {
+                            diagnostic = Diagnostic.Create(
+                                CTMDiagnostics.BaseTypeNotModelElement,
+                                interfaceDeclaration.GetLocation(),
+                                typeName);
+                            context.ReportDiagnostic(diagnostic);
+                        }
+                    }
                 }
 
                 // Check if a matching ModelMetatdata Assembly entry is available
@@ -131,6 +178,25 @@ namespace CTMAnalyzer {
                 context.ReportDiagnostic(diagnostic);
             }
 
+            if (CTMAnylzerHelper.IsCollection(propertyType)) {
+                if (property.GetMethod == null || property.SetMethod != null) {
+                    diagnostic = Diagnostic.Create(
+                                CTMDiagnostics.GetOnlyNeeded,
+                                propertyLocation,
+                                propertyName);
+                    context.ReportDiagnostic(diagnostic);
+                }
+            }
+            else {
+                if (property.GetMethod == null || property.SetMethod == null) {
+                    diagnostic = Diagnostic.Create(
+                                CTMDiagnostics.GetSetNeeded,
+                                propertyLocation,
+                                propertyName);
+                    context.ReportDiagnostic(diagnostic);
+                }
+            }
+
         }
 
         /// <summary>
@@ -150,7 +216,7 @@ namespace CTMAnalyzer {
 
             foreach (var attribute in attributeList.Attributes) {
                 IMethodSymbol? symbol = context.SemanticModel.GetSymbolInfo(attribute).Symbol as IMethodSymbol;
-                if (string.Equals(symbol?.ContainingType.Name, nameof(ModelMetadataAttribute))) {
+                if (!string.Equals(symbol?.ContainingType.Name, nameof(ModelMetadataAttribute))) {
                     continue;
                 }
 
@@ -162,7 +228,17 @@ namespace CTMAnalyzer {
                 Optional<object?> resourceNameValue = context.SemanticModel.GetConstantValue(resourceNameExpression);
                 if (resourceNameValue.HasValue && resourceNameValue.Value != null) {
                     string resourceName = resourceNameValue.Value.ToString();
-                    if (!namespaces.Contains(resourceName)) {
+
+                    string[] resourceNameParts = resourceName.Split('.');
+                    if (resourceNameParts.Length < 3) {
+                        Diagnostic diagnostic = Diagnostic.Create(
+                            CTMDiagnostics.ModelMetadataResourceNameParts,
+                            attribute.GetLocation(),
+                            resourceName);
+                        context.ReportDiagnostic(diagnostic);
+                    }
+                    else if (!namespaces.Contains(string.Join(".", resourceNameParts.Take(resourceNameParts.Length - 2)))) {
+                        Debugger.Break();
                         Diagnostic diagnostic = Diagnostic.Create(
                             CTMDiagnostics.AssemblyMetadataNoNamespaceDescriptor,
                             attribute.GetLocation(),

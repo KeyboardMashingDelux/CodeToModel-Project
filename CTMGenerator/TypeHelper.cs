@@ -115,7 +115,7 @@ namespace CTMGenerator {
             IReference? refinesReference = GetReference(types, RefinesName);
             if (refinesReference != null) {
                 if ((IsCollectionExpression(refinesReference)
-                    || (!refinesReference.IsUnique && Reference.IsOrdered == refinesReference.IsOrdered)) // TODO Ja oder Nein?
+                    || (!refinesReference.IsUnique && Reference.IsOrdered == refinesReference.IsOrdered)) 
                     && IsSubClass(Reference.ReferenceType, refinesReference.ReferenceType) // TODO unterklasse erlaubt auch außerhalb model
                     && IsBaseTypeOf(Reference.Parent, refinesReference.Parent)) {
                     Reference.Refines = refinesReference;
@@ -211,7 +211,8 @@ namespace CTMGenerator {
         /// Tries to get the <see cref="IType"/> by name from the given types collection.
         /// </summary>
         private IType? GetReferenceType(ICollectionExpression<IType> types) {
-            IEnumerable<IType>? possibleRefType = types.Where((type) => type.Name.Equals(TypeName));
+            IEnumerable<IType>? possibleRefType = 
+                types.Where((type) => type.Name.Equals(TypeName) || type.Name.Equals(TypeName.Substring(1)));
             if (possibleRefType != null && possibleRefType.Count() == 1) {
                 return possibleRefType.First();
             }
