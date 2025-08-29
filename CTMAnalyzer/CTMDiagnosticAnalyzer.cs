@@ -8,8 +8,6 @@ using NMF.Utilities;
 using System.Collections;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Reflection.Metadata;
-using System.Xml.Linq;
 
 namespace CTMAnalyzer {
 

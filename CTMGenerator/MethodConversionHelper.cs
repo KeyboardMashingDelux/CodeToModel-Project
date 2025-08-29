@@ -1,33 +1,63 @@
 ﻿using Microsoft.CodeAnalysis;
-using NMF.Models.Meta;
 using NMF.Utilities;
 using System.Collections.Immutable;
+using Operation = NMF.Models.Meta.Operation;
 
 namespace CTMGenerator {
 
+    /// <summary>
+    /// <see cref="SymbolConversionHelper"/> for <see cref="IMethodSymbol"/>s.
+    /// </summary>
     public class MethodConversionHelper : SymbolConversionHelper {
 
+        /// <summary>
+        /// <see cref="List{T}"/> of converted <see cref="Operation"/>s.
+        /// </summary>
         public List<Operation> Operations { get; private set; }
+
+        /// <summary>
+        /// <see cref="List{T}"/> of <see cref="TypeHelper"/> for the converted symbols.
+        /// </summary>
         public List<TypeHelper> RefTypeInfos { get; private set; }
 
         private readonly ParameterConversionHelper ParameterConverter;
 
+
+
+        /// <summary>
+        /// Creates an empty <see cref="MethodConversionHelper"/>.
+        /// </summary>
         public MethodConversionHelper() {
             ParameterConverter = new();
             Operations = [];
             RefTypeInfos = [];
         }
 
+        /// <summary>
+        /// Resets an <see cref="MethodConversionHelper"/>.
+        /// </summary>
         public void Reset() {
             Operations.Clear();
             RefTypeInfos.Clear();
         }
 
+        /// <summary>
+        /// Resets an <see cref="MethodConversionHelper"/> and then starts the conversion process.
+        /// </summary>
+        /// <param name="methods">The methods to convert.</param>
         public void CleanConvert(List<IMethodSymbol> methods) {
             Reset();
             Convert(methods);
         }
 
+        /// <summary>
+        /// Converts the given <see cref="List{T}"/> of <see cref="IMethodSymbol"/>s.
+        /// </summary>
+        /// <remarks>
+        /// Methods which become <see cref="Operation"/>s will be stored in <see cref="Operations"/>. <br/>
+        /// Type infos will be stored in <see cref="RefTypeInfos"/>. <br/>
+        /// </remarks>
+        /// <param name="methods">The methods to convert.</param>
         public void Convert(List<IMethodSymbol> methods) {
             foreach (IMethodSymbol method in methods) {
                 ITypeSymbol returnType = method.ReturnType;

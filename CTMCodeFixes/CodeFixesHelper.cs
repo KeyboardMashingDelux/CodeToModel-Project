@@ -6,6 +6,9 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace CTMCodeFixes {
 
+    /// <summary>
+    /// Helper class for creating code fixes.
+    /// </summary>
     public class CodeFixesHelper {
 
         private static readonly TypeSyntax typeIListExpression = SyntaxFactory.ParseName("NMF.Expressions.IListExpression");
@@ -14,8 +17,16 @@ namespace CTMCodeFixes {
 
         private static readonly TypeSyntax typeIOrderedSetExpression = SyntaxFactory.ParseName("NMF.Collections.Generic.IOrderedSetExpression");
 
-        public static InterfaceDeclarationSyntax? FindInterfaceDeclaration(Diagnostic makePartial, SyntaxNode root) {
-            TextSpan diagnosticSpan = makePartial.Location.SourceSpan;
+
+
+        /// <summary>
+        /// Finds the <see cref="InterfaceDeclarationSyntax"/> of an <see cref="Diagnostic"/>.
+        /// </summary>
+        /// <param name="diagnostic">An <see langword="interface"/> diagnostic.</param>
+        /// <param name="root">The root <see cref="SyntaxNode"/>.</param>
+        /// <returns>The <see cref="InterfaceDeclarationSyntax"/> if found, otherwise <see langword="null"/>.</returns>
+        public static InterfaceDeclarationSyntax? FindInterfaceDeclaration(Diagnostic diagnostic, SyntaxNode root) {
+            TextSpan diagnosticSpan = diagnostic.Location.SourceSpan;
 
             return root.FindToken(diagnosticSpan.Start)
                        .Parent?.AncestorsAndSelf()
@@ -23,8 +34,14 @@ namespace CTMCodeFixes {
                        .First();
         }
 
-        public static PropertyDeclarationSyntax? FindPropertyDeclaration(Diagnostic makePartial, SyntaxNode root) {
-            TextSpan diagnosticSpan = makePartial.Location.SourceSpan;
+        /// <summary>
+        /// Finds the <see cref="PropertyDeclarationSyntax"/> of an <see cref="Diagnostic"/>.
+        /// </summary>
+        /// <param name="diagnostic">An <see langword="property"/> diagnostic.</param>
+        /// <param name="root">The root <see cref="SyntaxNode"/>.</param>
+        /// <returns>The <see cref="PropertyDeclarationSyntax"/> if found, otherwise <see langword="null"/>.</returns>
+        public static PropertyDeclarationSyntax? FindPropertyDeclaration(Diagnostic diagnostic, SyntaxNode root) {
+            TextSpan diagnosticSpan = diagnostic.Location.SourceSpan;
 
             return root.FindToken(diagnosticSpan.Start)
                        .Parent?.AncestorsAndSelf()
@@ -32,6 +49,11 @@ namespace CTMCodeFixes {
                        .First();
         }
 
+        /// <summary>
+        /// Deceides the type which replaces a non NMF collection type.
+        /// </summary>
+        /// <param name="diagnostic">An <see langword="property"/> diagnostic.</param>
+        /// <returns>The new type in form of a <see cref="TypeSyntax"/>.</returns>
         public static TypeSyntax GetReplaceType(Diagnostic diagnostic) {
             if (diagnostic.Id.Equals(CTMDiagnostics.ISetExpressionInstead.Id)) {
                 return typeISetExpression;
@@ -44,7 +66,14 @@ namespace CTMCodeFixes {
             }
         }
 
-        // Credits: https://stackoverflow.com/questions/6219454/efficient-way-to-remove-all-whitespace-from-string/37368176#37368176
+        /// <summary>
+        /// Trims all whitespaces from a string.
+        /// </summary>
+        /// <remarks>
+        /// Credits to: https://stackoverflow.com/questions/6219454/efficient-way-to-remove-all-whitespace-from-string/37368176#37368176
+        /// </remarks>
+        /// <param name="str">Remove whitespaces from this.</param>
+        /// <returns>A string whitout whitespaces.</returns>
         public static string TrimAllWithInplaceCharArray(string str) {
 
             var len = str.Length;

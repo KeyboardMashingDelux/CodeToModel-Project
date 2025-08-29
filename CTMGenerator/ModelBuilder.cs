@@ -11,7 +11,6 @@ using NMF.Utilities;
 using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
-using System.Diagnostics;
 
 
 namespace CTMGenerator {
@@ -68,10 +67,11 @@ namespace CTMGenerator {
 
         /// <summary>
         /// Adds a element to the model.
-        /// <br/>
-        /// After adding all elements <see cref="CreateModel"/> has to be called!
         /// </summary>
-        /// <param name="element"></param>
+        /// <remarks>
+        /// After adding all elements <see cref="CreateModel"/> has to be called!
+        /// </remarks>
+        /// <param name="element">The element to add.</param>
         public void AddElement(INamedTypeSymbol element) {
             NamespaceSymbols.Add(element.Name, element);
 
@@ -104,7 +104,7 @@ namespace CTMGenerator {
         /// <summary>
         /// Adds a <see cref="Enumeration"/> to the model namespace.
         /// </summary>
-        /// <param name="element"></param>
+        /// <param name="element">The element to add.</param>
         private void AddEnum(ITypeSymbol element) {
             ImmutableArray<AttributeData> elementAttributes = element.GetAttributes();
 
@@ -126,8 +126,9 @@ namespace CTMGenerator {
         }
 
         /// <summary>
-        /// Adds a <see cref="Class"/> with basic information like it's name to the model namespace.
+        /// Adds a <see cref="Class"/> with basic information (like it's name) to the model namespace.
         /// </summary>
+        /// <param name="element">The element to add.</param>
         private void AddClass(ITypeSymbol element) {
             ImmutableArray<AttributeData> elementAttributes = element.GetAttributes();
  
@@ -189,7 +190,7 @@ namespace CTMGenerator {
 
 
                 // Add identifier
-                classType.Identifier = PropertyConverter.IdAttribute;
+                classType.Identifier = PropertyConverter.IdIAttribute;
             }
         }
 
@@ -213,7 +214,7 @@ namespace CTMGenerator {
                 }
             }
         }
-
+        
         private IType? GetTypeByName(string? name) {
             if (!string.IsNullOrWhiteSpace(name)) {
                 foreach (IType type in Namespace.Types) {
@@ -269,10 +270,12 @@ namespace CTMGenerator {
         }
 
         /// <summary>
-        /// Saves the created model. Result should be saved to the same location as the first added element.
-        /// Otherwise will be put to the root of the drive.
+        /// Saves the created model
         /// </summary>
-        /// <exception cref="InvalidOperationException"></exception>
+        /// <remarks>
+        /// Result should be saved to the same location as the first added element,
+        /// if no output path was specified otherwise.
+        /// </remarks>
         public void DoSave() {
             if (!string.IsNullOrWhiteSpace(OutputPath) && !Namespace.Types.IsNullOrEmpty()) {
                 ModelRepository.Save(Namespace, $"{OutputPath}/{Name}.{Suffix}", true);
@@ -282,7 +285,7 @@ namespace CTMGenerator {
         /// <summary>
         /// Generates source code from the model constructed with <see cref="CreateModel"/>.
         /// </summary>
-        /// <returns>The generated source code</returns>
+        /// <returns>The generated source code or <see langword="null"/> if no types were added to the model.</returns>
         public string? DoCreateCode() {
             if (Namespace.Types.IsNullOrEmpty()) {
                 return null;
@@ -348,14 +351,24 @@ namespace CTMGenerator {
                             .Any(declaration => declaration.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.PartialKeyword)));
         }
 
+        /// <summary>
+        /// Sets the path the model gets saved to.
+        /// </summary>
+        /// <param name="outputPath">A path to a folder.</param>
         public void SetOutputPath(string? outputPath) {
             OutputPath = outputPath;
         }
 
+        /// <summary>
+        /// Retrieves the simple name of the model.
+        /// </summary>
         public string GetName() {
             return Name;
         }
 
+        /// <summary>
+        /// Retrieves the full name of the model.
+        /// </summary>
         public string GetFullName() {
             return FullName;
         }

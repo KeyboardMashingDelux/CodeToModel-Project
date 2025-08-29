@@ -12,20 +12,44 @@ namespace CTMGenerator {
     /// </summary>
     public class TypeHelper {
 
+        /// <summary>
+        /// The <see cref="IAttribute"/> used by this instance. <see langword="null"/> if unused.
+        /// </summary>
         public IAttribute? AttributeType {  get; private set; }
 
+        /// <summary>
+        /// The <see cref="IReference"/> used by this instance. <see langword="null"/> if unused.
+        /// </summary>
         public IReference? Reference { get; private set; }
 
+        /// <summary>
+        /// The <see cref="IOperation"/> used by this instance. <see langword="null"/> if unused.
+        /// </summary>
         public IOperation? Operation { get; private set; }
 
+        /// <summary>
+        /// The <see cref="IParameter"/> used by this instance. <see langword="null"/> if unused.
+        /// </summary>
         public IParameter? Parameter { get; private set; }
 
+        /// <summary>
+        /// <see cref="ITypeSymbol"/> which from which type infos are derived from. <see langword="null"/> if unused.
+        /// </summary>
         public readonly ITypeSymbol? TypeSymbol;
 
+        /// <summary>
+        /// The name of the type reference.
+        /// </summary>
         private readonly string TypeName;
 
+        /// <summary>
+        /// The name of the opposite type reference.
+        /// </summary>
         private readonly string OppositeName;
 
+        /// <summary>
+        /// The name of the refines type reference.
+        /// </summary>
         private readonly string RefinesName;
 
 
@@ -98,8 +122,13 @@ namespace CTMGenerator {
             RefinesName = refinesName;
         }
 
-        
 
+        /// <summary>
+        /// Sets the refines element of the available 
+        /// <see cref="IAttribute"/>, <see cref="IReference"/> or <see cref="IOperation"/>.
+        /// </summary>
+        /// <param name="types">List of available <see cref="IType"/>s.</param>
+        /// <returns><see langword="true"/> if successful, otherwise <see langword="false"/>.</returns>
         public bool SetRefines(ICollectionExpression<IType> types) {
             if (!string.IsNullOrWhiteSpace(RefinesName)) {
                 if (AttributeType != null) {
@@ -116,9 +145,14 @@ namespace CTMGenerator {
             return false;
         }
 
+        /// <summary>
+        /// Sets the refines element of the available <see cref="IAttribute"/>.
+        /// </summary>
+        /// <param name="types">List of available <see cref="IType"/>s.</param>
+        /// <returns><see langword="true"/> if successful, otherwise <see langword="false"/>.</returns>
         public bool SetAttributeRefines(ICollectionExpression<IType> types) {
             if (AttributeType == null) {
-                throw new InvalidOperationException($"Can't set Attribute Refines for null! (null -> {RefinesName})");
+                return false;
             }
 
             IAttribute? refinesAttribute = GetAttribute(types);
@@ -135,9 +169,14 @@ namespace CTMGenerator {
             return false;
         }
 
+        /// <summary>
+        /// Sets the refines element of the available <see cref="IReference"/>.
+        /// </summary>
+        /// <param name="types">List of available <see cref="IType"/>s.</param>
+        /// <returns><see langword="true"/> if successful, otherwise <see langword="false"/>.</returns>
         public bool SetReferenceRefines(ICollectionExpression<IType> types) {
             if (Reference == null) {
-                throw new InvalidOperationException($"Can't set Reference Refines for null! (null -> {RefinesName})");
+                return false;
             }
 
             IReference? refinesReference = GetReference(types, RefinesName);
@@ -154,9 +193,14 @@ namespace CTMGenerator {
             return false;
         }
 
+        /// <summary>
+        /// Sets the refines element of the available <see cref="IOperation"/>.
+        /// </summary>
+        /// <param name="types">List of available <see cref="IType"/>s.</param>
+        /// <returns><see langword="true"/> if successful, otherwise <see langword="false"/>.</returns>
         public bool SetOperationRefines(ICollectionExpression<IType> types) {
             if (Operation == null) {
-                throw new InvalidOperationException($"Can't set Operation Refines for null! (null -> {RefinesName})");
+                return false;
             }
 
             IOperation? refinesOperation = GetOperation(types);
@@ -173,6 +217,11 @@ namespace CTMGenerator {
             return false;
         }
 
+        /// <summary>
+        /// Sets the opposite <see cref="IReference"/> of the available <see cref="IReference"/>.
+        /// </summary>
+        /// <param name="types">List of available <see cref="IType"/>s.</param>
+        /// <returns><see langword="true"/> if successful, otherwise <see langword="false"/>.</returns>
         public bool SetOpposite(ICollectionExpression<IType> types) {
             if (!string.IsNullOrWhiteSpace(OppositeName) && Reference != null) {
                 IReference? oppositeReference = GetReference(types, OppositeName);
@@ -185,6 +234,12 @@ namespace CTMGenerator {
             return false;
         }
 
+        /// <summary>
+        /// Sets the type element of the available 
+        /// <see cref="IAttribute"/>, <see cref="IReference"/> or <see cref="IOperation"/>.
+        /// </summary>
+        /// <param name="types">List of available <see cref="IType"/>s.</param>
+        /// <returns><see langword="true"/> if successful, otherwise <see langword="false"/>.</returns>
         public bool SetType(ICollectionExpression<IType> types) {
 
             if (!string.IsNullOrWhiteSpace(TypeName)) {
@@ -202,9 +257,14 @@ namespace CTMGenerator {
             return false;
         }
 
+        /// <summary>
+        /// Sets the type element of the available <see cref="IOperation"/>.
+        /// </summary>
+        /// <param name="types">List of available <see cref="IType"/>s.</param>
+        /// <returns><see langword="true"/> if successful, otherwise <see langword="false"/>.</returns>
         public bool SetOperationType(ICollectionExpression<IType> types) {
             if (Operation == null) {
-                throw new InvalidOperationException($"Can't set Operation type for null! (null -> {TypeName})");
+                return false;
             }
 
             Operation.Type = GetReferenceType(types) ?? GetPrimitiveType();
@@ -212,9 +272,14 @@ namespace CTMGenerator {
             return true;
         }
 
+        /// <summary>
+        /// Sets the type element of the available <see cref="IParameter"/>.
+        /// </summary>
+        /// <param name="types">List of available <see cref="IType"/>s.</param>
+        /// <returns><see langword="true"/> if successful, otherwise <see langword="false"/>.</returns>
         public bool SetParameterType(ICollectionExpression<IType> types) {
             if (Parameter == null) {
-                throw new InvalidOperationException($"Can't set Operation type for null! (null -> {TypeName})");
+                return false;
             }
 
             Parameter.Type = GetReferenceType(types) ?? GetPrimitiveType();
@@ -222,9 +287,14 @@ namespace CTMGenerator {
             return true;
         }
 
+        /// <summary>
+        /// Sets the type element of the available <see cref="IReference"/>.
+        /// </summary>
+        /// <param name="types">List of available <see cref="IType"/>s.</param>
+        /// <returns><see langword="true"/> if successful, otherwise <see langword="false"/>.</returns>
         public bool SetReferenceType(ICollectionExpression<IType> types) {
             if (Reference == null) {
-                throw new InvalidOperationException($"Can't set reference for null! (null -> {TypeName})");
+                return false;
             }
 
             if (GetReferenceType(types) is not null and IReferenceType refTypeAsIReference) {
@@ -236,8 +306,10 @@ namespace CTMGenerator {
         }
 
         /// <summary>
-        /// Tries to get the <see cref="IType"/> by name from the given types collection.
+        /// Tries to get the <see cref="IType"/> by name.
         /// </summary>
+        /// <param name="types">List of available <see cref="IType"/>s.</param>
+        /// <returns>The found <see cref="IType"/> or <see langword="null"/> if none was found.</returns>
         private IType? GetReferenceType(ICollectionExpression<IType> types) {
             IEnumerable<IType>? possibleRefType = 
                 types.Where((type) => type.Name.Equals(TypeName) || type.Name.Equals(TypeName.Substring(1)));
@@ -251,6 +323,10 @@ namespace CTMGenerator {
         /// <summary>
         /// Creates the primitive type by name.
         /// </summary>
+        /// <remarks>
+        /// Uses the previously set <see cref="TypeSymbol"/>.
+        /// </remarks>
+        /// <returns>An <see cref="IPrimitiveType"/>.</returns>
         private IPrimitiveType GetPrimitiveType() {
             return new PrimitiveType() {
                 Name = TypeName,
@@ -259,8 +335,10 @@ namespace CTMGenerator {
         }
 
         /// <summary>
-        /// Tries to get the <see cref="IAttribute"/> by OppositeName from the given types collection.
+        /// Tries to get the <see cref="IAttribute"/> by <see cref="RefinesName"/> from the given types collection.
         /// </summary>
+        /// <param name="types">List of available <see cref="IType"/>s.</param>
+        /// <returns>The found <see cref="IAttribute"/> or <see langword="null"/> if none was found.</returns>
         private IAttribute? GetAttribute(ICollectionExpression<IType> types) {
             foreach (IType type in types) {
                 if (type is IClass attributeParent) {
@@ -278,6 +356,8 @@ namespace CTMGenerator {
         /// <summary>
         /// Tries to get the <see cref="IReference"/> by the given name from the given types collection.
         /// </summary>
+        ///         /// <param name="types">List of available <see cref="IType"/>s.</param>
+        /// <returns>The found <see cref="IReference"/> or <see langword="null"/> if none was found.</returns>
         private IReference? GetReference(ICollectionExpression<IType> types, string compareName) {
             foreach (IType type in types) {
                 if (type is IClass referenceParent) {
@@ -295,6 +375,8 @@ namespace CTMGenerator {
         /// <summary>
         /// Tries to get the <see cref="IOperation"/> by RefinesName from the given types collection.
         /// </summary>
+        /// <param name="types">List of available <see cref="IType"/>s.</param>
+        /// <returns>The found <see cref="IOperation"/> or <see langword="null"/> if none was found.</returns>
         private IOperation? GetOperation(ICollectionExpression<IType> types) {
             foreach (IType type in types) {
                 if (type is IClass operationParent) {
@@ -309,6 +391,13 @@ namespace CTMGenerator {
             return null;
         }
 
+        /// <summary>
+        /// Determines if a class is a base class of another.
+        /// </summary>
+        /// <param name="element">The current class.</param>
+        /// <param name="baseElement">The supposed base class.</param>
+        /// <returns><see langword="true"/> if <paramref name="element"/> is a base class 
+        /// of <paramref name="baseElement"/>, otherwise <see langword="false"/>..</returns>
         private bool IsBaseTypeOf(IModelElement element, IModelElement baseElement) {
             if (element is IClass typeClass && baseElement is IClass baseTypeClass) {
                 return baseTypeClass.IsAssignableFrom(typeClass);
@@ -317,6 +406,12 @@ namespace CTMGenerator {
             return false;
         }
 
+        /// <summary>
+        /// Determines if an <see cref="ITypedElement"/> is a <see cref="ICollectionExpression"/>.
+        /// </summary>
+        /// <param name="element">The <see cref="ITypedElement"/> to check.</param>
+        /// <returns><see langword="true"/> if <paramref name="element"/> is a <see cref="ICollectionExpression"/>
+        /// , otherwise <see langword="false"/>.</returns>
         private bool IsCollectionExpression(ITypedElement element) {
             if ((element.UpperBound > 1 || element.UpperBound == -1) && !element.IsUnique && !element.IsOrdered) {
                 return true;
@@ -328,6 +423,8 @@ namespace CTMGenerator {
         /// <summary>
         /// Converts this <see cref="IReference"/> to a <see cref="IAttribute"/> and sets its <see cref="IType"/>. 
         /// </summary>
+        /// <param name="types">List of available <see cref="IType"/>s.</param>
+        /// <returns>The newly created <see cref="IAttribute"/>.</returns>
         public IAttribute ReferenceToAttribute(ICollectionExpression<IType> types) {
             if (Reference == null) {
                 throw new InvalidOperationException($"Reference was null! Can't convert null to Attribute!");

@@ -7,12 +7,19 @@ using NMF.Expressions;
 using NMF.Models;
 using NMF.Utilities;
 using System.Collections.Immutable;
-using System.Runtime.InteropServices.ComTypes;
 
 namespace CTMAnalyzer {
 
+    /// <summary>
+    /// Helper class for creating diagnostics.
+    /// </summary>
     public class CTMAnylzerHelper {
 
+        /// <summary>
+        /// Retrieves all namespaces from an <see cref="INamespaceSymbol"/>.
+        /// </summary>
+        /// <param name="ns">The <see cref="INamespaceSymbol"/>.</param>
+        /// <returns>A <see cref="HashSet{T}"/> of namespace names.</returns>
         public static HashSet<string> GetNamespaces(INamespaceSymbol ns) {
             HashSet<string> namespaces = [];
             if (!string.IsNullOrEmpty(ns.Name))
@@ -25,19 +32,34 @@ namespace CTMAnalyzer {
             return namespaces;
         }
 
+        /// <param name="type">Type to check.</param>
+        /// <returns><see langword="true"/> if the type is a <see cref="ModelInterface"/>, otherwise <see langword="false"/>.</returns>
         public static bool IsModelInterface(ISymbol type) {
             return Utilities.GetAttributeByName(type.GetAttributes(), nameof(ModelInterface)) != null;
         }
 
+        /// <param name="interfaceDeclaration"><see langword="interface"/> to check.</param>
+        /// <returns>
+        /// <see langword="true"/> if the <see langword="interface"/> is <see langword="partial"/>, otherwise <see langword="false"/>.
+        /// </returns>
         public static bool IsPartial(InterfaceDeclarationSyntax interfaceDeclaration) {
             return interfaceDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword));
         }
 
+        /// <param name="interfaceDeclaration"><see langword="interface"/> to check.</param>
+        /// <returns>
+        /// <see langword="true"/> if the <see langword="interface"/> implements <see cref="IModelElement"/>, otherwise <see langword="false"/>.
+        /// </returns>
         public static bool ImplementsIModelElement(InterfaceDeclarationSyntax interfaceDeclaration) {
             BaseListSyntax? baseList = interfaceDeclaration.BaseList;
             return baseList != null && baseList.Types.Any(t => t.ToString().Contains(nameof(IModelElement)));
         }
 
+        /// <summary>
+        /// Tries to retrieve the location of a <see cref="IPropertySymbol"/>.
+        /// </summary>
+        /// <param name="property">The property.</param>
+        /// <returns>The <see cref="Location"/> or <see langword="null"/> if none was found.</returns>
         public static Location? GetPropertyLocation(IPropertySymbol property) {
             ImmutableArray<Location> fieldLocations = property.Locations;
             Location? location = fieldLocations.FirstOrDefault();
@@ -56,9 +78,7 @@ namespace CTMAnalyzer {
             return location;
         }
 
-        /// <summary>
-        /// Gets the full namespace name.
-        /// </summary>
+        /// <returns>The full namespace name.</returns>
         public static string GetNamespace(string resourceName) {
             string[] parts = resourceName.Split('.');
 
@@ -83,6 +103,8 @@ namespace CTMAnalyzer {
             return false;
         }
 
+        /// <param name="type">Type to check.</param>
+        /// <returns><see langword="true"/> if the type is a collection, otherwise <see langword="false"/>.</returns>
         public static bool IsCollection(ITypeSymbol type) {
             string typeName = type.Name;
             return typeName.Equals(nameof(IListExpression<int>))

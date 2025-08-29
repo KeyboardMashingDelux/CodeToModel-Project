@@ -43,9 +43,9 @@ namespace CTMLib {
         /// <summary>
         /// Finds the first occurence of an attribute by the given name.
         /// </summary>
-        /// <param name="attributes"></param>
-        /// <param name="name"></param>
-        /// <returns></returns>
+        /// <param name="attributes">List of possible attributes</param>
+        /// <param name="name">Name of the wanted attribute</param>
+        /// <returns>The attributes <see cref="AttributeData"/> or <see langword="null"/> if none was found.</returns>
         public static AttributeData? GetAttributeByName(ImmutableArray<AttributeData> attributes, string name) {
             foreach (var attribute in attributes) {
                 var attrClass = attribute.AttributeClass;
@@ -60,9 +60,9 @@ namespace CTMLib {
         /// <summary>
         /// Finds all occurences of an attribute by the given name.
         /// </summary>
-        /// <param name="attributes"></param>
-        /// <param name="name"></param>
-        /// <returns></returns>
+        /// <param name="attributes">List of possible attributes</param>
+        /// <param name="name">Name of the wanted attribute</param>
+        /// <returns><see cref="List{T}"/> of attributes <see cref="AttributeData"/>.</returns>
         public static List<AttributeData> GetAttributesByName(ImmutableArray<AttributeData> attributes, string name) {
             List<AttributeData> result = [];
             foreach (var attribute in attributes) {
@@ -78,6 +78,9 @@ namespace CTMLib {
         /// <summary>
         /// Determins if the attribute comes from <see cref="CTMLib"/>.
         /// </summary>
+        /// <param name="attributeClass">Class which belongs to the attribute</param>
+        /// <param name="attributeName">Name of the attribute</param>
+        /// <returns><see langword="true"/> if the attribute is part of <see cref="CTMLib"/>.</returns>
         public static bool IsLibAttributeClass(INamedTypeSymbol? attributeClass, string attributeName) {
             return attributeClass?.Name == attributeName && attributeClass.ContainingNamespace is {
                 Name: nameof(CTMLib),
@@ -89,8 +92,8 @@ namespace CTMLib {
         /// Creates a list of all ModelMetadataAttribute attribute data. 
         /// Should a ModelMetadataAttribute attribute hold null references it will be ignored.
         /// </summary>
-        /// <param name="assembly"></param>
-        /// <returns></returns>
+        /// <param name="assembly">The <see cref="IAssemblySymbol"/> which contains the <see cref="ModelMetadataAttribute"/> data.</param>
+        /// <returns>Two <see cref="List{T}"/> which contain model URIs and resouce names.</returns>
         public static List<(string uri, string resourceName)> GetMetadata(IAssemblySymbol assembly) {
             if (assembly == null)
                 return [];
@@ -120,6 +123,7 @@ namespace CTMLib {
         /// <summary>
         /// An interface should start with and upper case "I" followed by another uppercase letter.
         /// </summary>
+        /// <param name="interfaceName">Name to check.</param>
         /// <returns><see langword="true"/> if the interface name is valid.</returns>
         public static bool IsValidInterfaceName(string interfaceName) {
             return interfaceName.StartsWith("I") && interfaceName.Length >= 2 && char.IsUpper(interfaceName[1]);
@@ -128,9 +132,11 @@ namespace CTMLib {
         /// <summary>
         /// Retrievs the attribute from the given list by name.
         /// </summary>
+        /// <param name="attributes">List of possible attributes.</param>
+        /// <param name="attributeName">Name of the attribute.</param>
         /// <param name="index">Represents the strings constructor index</param>
         public static string? GetAttributeString(ImmutableArray<AttributeData> attributes, string attributeName, int index) {
-            var attribute = Utilities.GetAttributeByName(attributes, attributeName);
+            var attribute = GetAttributeByName(attributes, attributeName);
             var ca = attribute?.ConstructorArguments;
             return ca?[index].Value?.ToString();
         }
@@ -138,6 +144,8 @@ namespace CTMLib {
         /// <summary>
         /// Helper method, calls <see cref="GetAttributeString"/> with index 0.
         /// </summary>
+        /// <param name="attributes">List of possible attributes.</param>
+        /// <param name="attributeName">Name of the attribute.</param>
         public static string? GetFirstString(ImmutableArray<AttributeData> attributes, string attributeName) {
             return GetAttributeString(attributes, attributeName, 0);
         }
@@ -145,6 +153,8 @@ namespace CTMLib {
         /// <summary>
         /// Helper method, calls <see cref="GetAttributeString"/> with index 1.
         /// </summary>
+        /// <param name="attributes">List of possible attributes.</param>
+        /// <param name="attributeName">Name of the attribute.</param>
         public static string? GetSecondString(ImmutableArray<AttributeData> attributes, string attributeName) {
             return GetAttributeString(attributes, attributeName, 1);
         }

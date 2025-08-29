@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NMF.Models;
 using NMF.Models.Meta;
-using NMF.Models.Repository;
 using System.Collections.Immutable;
 using System.Xml.Linq;
 
@@ -186,75 +185,6 @@ namespace CTMGenerator {
 
         public static string? GetModelURI(ITypeSymbol type) {
             return Utilities.GetFirstString(type.GetAttributes(), nameof(ModelRepresentationClassAttribute));
-        }
-
-
-
-
-
-        /// #############################
-        /// ###   Primitive Creation  ###
-        /// #############################
-
-
-
-        /// <summary>
-        /// Gets the primitive type by the special type.
-        /// </summary>
-        public static IType? GetPrimitiveType(SpecialType specialType) {
-            switch (specialType) {
-                case SpecialType.System_Boolean:
-                    return ResolvePrimitve<bool>();
-                case SpecialType.System_Byte:
-                case SpecialType.System_SByte:
-                    return ResolvePrimitve<byte>();
-                case SpecialType.System_Int16:
-                case SpecialType.System_UInt16:
-                    return ResolvePrimitve<short>();
-                case SpecialType.System_Int32:
-                case SpecialType.System_UInt32:
-                    return ResolvePrimitve<int>();
-                case SpecialType.System_Int64:
-                case SpecialType.System_UInt64:
-                    return ResolvePrimitve<long>();
-                case SpecialType.System_Char:
-                    return ResolvePrimitve<char>();
-                case SpecialType.System_Double:
-                    return ResolvePrimitve<double>();
-                case SpecialType.System_Single:
-                    return ResolvePrimitve<float>();
-                case SpecialType.System_String:
-                    return ResolvePrimitve<string>();
-                case SpecialType.System_Object:
-                    return ResolvePrimitve<object>();
-                case SpecialType.System_DateTime:
-                    return ResolvePrimitve<DateTime>();
-                case SpecialType.System_Decimal:
-                    return ResolvePrimitve<decimal>();
-                default:
-                    return null;
-            }
-        }
-
-        /// <summary>
-        /// Contains the NMF friendly aliases of some primitive types.
-        /// </summary>
-        private static readonly Dictionary<System.Type, string> Aliases = new() {
-            { typeof(short), "Short" },
-            { typeof(int), "Integer" },
-            { typeof(long), "Long" },
-            { typeof(float), "Float" },
-        };
-
-        /// <summary>
-        /// Resolves the primitive type from the <see cref="MetaRepository"/>. 
-        /// </summary>
-        /// <typeparam name="T">The primitve type to resolve.</typeparam>
-        public static IPrimitiveType ResolvePrimitve<T>() {
-            Aliases.TryGetValue(typeof(T), out var primitiveName);
-            primitiveName ??= typeof(T).Name;
-
-            return ((IPrimitiveType)(MetaRepository.Instance.Resolve($"http://nmf.codeplex.com/nmeta/#//{primitiveName}")));
         }
     }
 }

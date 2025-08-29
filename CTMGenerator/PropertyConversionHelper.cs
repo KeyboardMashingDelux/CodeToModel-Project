@@ -7,34 +7,71 @@ using Attribute = NMF.Models.Meta.Attribute;
 
 namespace CTMGenerator {
 
+    /// <summary>
+    /// <see cref="SymbolConversionHelper"/> for <see cref="IPropertySymbol"/>s.
+    /// </summary>
     public class PropertyConversionHelper : SymbolConversionHelper {
 
+        /// <summary>
+        /// <see cref="List{T}"/> of converted <see cref="IReference"/>s.
+        /// </summary>
         public List<IReference> References { get; private set; }
+
+        /// <summary>
+        /// <see cref="List{T}"/> of converted <see cref="IAttribute"/>s.
+        /// </summary>
         public List<IAttribute> Attributes { get; private set; }
-        public IAttribute? IdAttribute { get; private set; }
+
+        /// <summary>
+        /// <see cref="IAttribute"/> which is marked as id by an <see cref="IdAttribute"/>.
+        /// </summary>
+        public IAttribute? IdIAttribute { get; private set; }
+
+        /// <summary>
+        /// <see cref="List{T}"/> of <see cref="TypeHelper"/> for the converted symbols.
+        /// </summary>
         public List<TypeHelper> RefTypeInfos { get; private set; }
 
 
 
+        /// <summary>
+        /// Creates an empty <see cref="PropertyConversionHelper"/>.
+        /// </summary>
         public PropertyConversionHelper() {
             References = [];
             Attributes = [];
-            IdAttribute = null;
+            IdIAttribute = null;
             RefTypeInfos = [];
         }
 
+        /// <summary>
+        /// Resets an <see cref="PropertyConversionHelper"/>.
+        /// </summary>
         public void Reset() {
             References.Clear();
             Attributes.Clear();
-            IdAttribute = null;
+            IdIAttribute = null;
             RefTypeInfos.Clear();
         }
 
+        /// <summary>
+        /// Resets an <see cref="PropertyConversionHelper"/> and then starts the conversion process.
+        /// </summary>
+        /// <param name="properties">The properties to convert.</param>
         public void CleanConvert(List<IPropertySymbol> properties) { 
             Reset();
             Convert(properties);
         }
 
+        /// <summary>
+        /// Converts the given <see cref="List{T}"/> of <see cref="IPropertySymbol"/>s.
+        /// </summary>
+        /// <remarks>
+        /// Properies which become <see cref="IAttribute"/>s will be stored in <see cref="Attributes"/>. <br/>
+        /// Properies which become <see cref="IReference"/>s will be stored in <see cref="References"/>. <br/>
+        /// Type infos will be stored in <see cref="RefTypeInfos"/>. <br/>
+        /// </remarks>
+        /// <param name="properties">The properties to convert.</param>
         public void Convert(List<IPropertySymbol> properties) {
             foreach (IPropertySymbol property in properties) {
                 INamedTypeSymbol type = (INamedTypeSymbol)property.Type;
@@ -65,7 +102,7 @@ namespace CTMGenerator {
                     };
 
                     if (Utilities.GetAttributeByName(propertyAttributes, nameof(IdAttribute)) != null) {
-                        IdAttribute = attribute;
+                        IdIAttribute = attribute;
                     }
 
                     RefTypeInfos.Add(new TypeHelper(attribute, refinesName: ModelBuilderHelper.GetRefinesTarget(propertyAttributes)));
@@ -99,8 +136,8 @@ namespace CTMGenerator {
 
                     References.Add(reference);
 
-                    if (IdAttribute == null && Utilities.GetAttributeByName(propertyAttributes, nameof(IdAttribute)) != null) {
-                        IdAttribute = new Attribute() { Name = Utilities.REFIDATTRIBUTE + reference.Name };
+                    if (IdIAttribute == null && Utilities.GetAttributeByName(propertyAttributes, nameof(IdAttribute)) != null) {
+                        IdIAttribute = new Attribute() { Name = Utilities.REFIDATTRIBUTE + reference.Name };
                     }
                 }
             }

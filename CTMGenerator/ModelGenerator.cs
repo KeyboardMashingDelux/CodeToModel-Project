@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NMF.Expressions.Linq;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Xml.Linq;
 
 namespace CTMGenerator {

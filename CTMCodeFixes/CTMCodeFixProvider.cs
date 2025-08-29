@@ -9,9 +9,13 @@ using System.Diagnostics;
 
 namespace CTMCodeFixes {
 
+    /// <summary>
+    /// CTM implementation of a <see cref="CodeFixProvider"/> use in combination with <see cref="CTMAnalyzer"/>.
+    /// </summary>
     [ExportCodeFixProvider(LanguageNames.CSharp)]
     public class CTMCodeFixProvider : CodeFixProvider {
 
+        /// <inheritdoc/>
         public override ImmutableArray<string> FixableDiagnosticIds { get; } 
             = ImmutableArray.Create(
                 CTMDiagnostics.RequiredModelInterfaceKeyword.Id,
@@ -20,6 +24,7 @@ namespace CTMCodeFixes {
                 CTMDiagnostics.IOrderedSetExpressionInstead.Id
             );
 
+        /// <inheritdoc/>
         public override Task RegisterCodeFixesAsync(CodeFixContext context) {
             CodeAction action;
 
@@ -118,6 +123,7 @@ namespace CTMCodeFixes {
             return newDoc;
         }
 
+        /// <inheritdoc/>
         public override FixAllProvider? GetFixAllProvider() {
             return WellKnownFixAllProviders.BatchFixer;
         }

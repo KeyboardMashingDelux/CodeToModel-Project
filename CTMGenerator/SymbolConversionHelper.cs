@@ -9,6 +9,9 @@ using System.Collections.Immutable;
 
 namespace CTMGenerator {
 
+    /// <summary>
+    /// Base class used for <see cref="ISymbol"/> conversion to various kinds of <see cref="IModelElement"/>.
+    /// </summary>
     public class SymbolConversionHelper {
 
         private const string IListExpressionName = nameof(IListExpression<int>);
@@ -17,6 +20,10 @@ namespace CTMGenerator {
 
 
 
+        /// <summary>
+        /// Determins of a type is one of the NMF expressions.
+        /// </summary>
+        /// <param name="type">The <see cref="ITypeSymbol"/> to check.</param>
         /// <returns>True for <see cref="IListExpression{T}"/>, <see cref="ISetExpression{T}"/> or 
         /// <see cref="IOrderedSetExpression{T}"/></returns>
         public bool IsXExpression(ITypeSymbol type) {
@@ -29,6 +36,8 @@ namespace CTMGenerator {
         /// <summary>
         /// Determines if the given type is ordered by NMF standards.
         /// </summary>
+        /// <param name="type">The <see cref="ITypeSymbol"/> to check.</param>
+        /// <returns><see langword="true"/> if the type is ordered, otherwise <see langword="false"/>.</returns>
         public bool IsOrdered(ITypeSymbol type) {
             return type.Name.Equals(IListExpressionName) || type.Name.Equals(IOrderedSetExpressionName);
         }
@@ -36,6 +45,8 @@ namespace CTMGenerator {
         /// <summary>
         /// Determines if the given type is unique by NMF standards.
         /// </summary>
+        /// <param name="type">The <see cref="ITypeSymbol"/> to check.</param>
+        /// <returns><see langword="true"/> if the type is unique, otherwise <see langword="false"/>.</returns>
         public bool IsUnique(ITypeSymbol type) {
             return type.Name.Equals(ISetExpressionName) || type.Name.Equals(IOrderedSetExpressionName);
         }
@@ -43,6 +54,8 @@ namespace CTMGenerator {
         /// <summary>
         /// Checks if the given type is nullable.
         /// </summary>
+        /// <param name="type">The <see cref="ITypeSymbol"/> to check.</param>
+        /// <returns><see langword="true"/> if the type is nullable, otherwise <see langword="false"/>.</returns>
         public bool IsNullable(ITypeSymbol type) {
             if (type is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.IsGenericType) {
                 if (namedTypeSymbol.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T) {
@@ -64,6 +77,8 @@ namespace CTMGenerator {
         /// <summary>
         /// Determines if the given special type is primitive.
         /// </summary>
+        /// <param name="specialType">A <see cref="ITypeSymbol"/>s <see cref="SpecialType"/>.</param>
+        /// <returns><see langword="true"/> if the type is primitiv, otherwise <see langword="false"/>.</returns>
         public bool IsPrimitive(SpecialType specialType) {
             switch (specialType) {
                 case SpecialType.System_Boolean:
@@ -91,6 +106,8 @@ namespace CTMGenerator {
         /// <summary>
         /// Retrives the first type argument of the given type.
         /// </summary>
+        /// <param name="type">The <see cref="ITypeSymbol"/> to get the type argument from.</param>
+        /// <returns><see cref="ITypeSymbol"/> if a type argument could be obtained, otherwise <see langword="null"/>.</returns>
         public ITypeSymbol? GetTypeArgument(ITypeSymbol type) {
             if (type is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.IsGenericType) {
                 return namedTypeSymbol.TypeArguments.FirstOrDefault();
@@ -102,7 +119,9 @@ namespace CTMGenerator {
         /// <summary>
         /// Retrieves the value of the <see cref="LowerBoundAttribute"/>.
         /// </summary>
+        /// <param name="attributes">Available attributes.</param>
         /// <param name="isNullable">Whether or not the type the attributes belong to is nullable.</param>
+        /// <returns>The lower bound.</returns>
         public int GetLowerBound(ImmutableArray<AttributeData> attributes, bool isNullable) {
             var attribute = Utilities.GetAttributeByName(attributes, nameof(LowerBoundAttribute));
             var ca = attribute?.ConstructorArguments;
@@ -112,7 +131,9 @@ namespace CTMGenerator {
         /// <summary>
         /// Retrieves the value of the <see cref="UpperBoundAttribute"/>.
         /// </summary>
+        /// <param name="attributes">Available attributes.</param>
         /// <param name="isCollection">Whether or not the type the attributes belong to is a collection.</param>
+        /// <returns>The upper bound.</returns>
         public int GetUpperBound(ImmutableArray<AttributeData> attributes, bool isCollection) {
             var attribute = Utilities.GetAttributeByName(attributes, nameof(UpperBoundAttribute));
             var ca = attribute?.ConstructorArguments;
@@ -132,7 +153,9 @@ namespace CTMGenerator {
         /// <summary>
         /// Gets the primitive type by the special type.
         /// </summary>
-        public IType? GetPrimitiveType(SpecialType specialType) {
+        /// <param name="specialType">A <see cref="ITypeSymbol"/>s <see cref="SpecialType"/>.</param>
+        /// <returns>The equivalent <see cref="IPrimitiveType"/> or <see langword="null"/> if none was found.</returns>
+        public IPrimitiveType? GetPrimitiveType(SpecialType specialType) {
             switch (specialType) {
                 case SpecialType.System_Boolean:
                     return ResolvePrimitve<bool>();
@@ -181,11 +204,17 @@ namespace CTMGenerator {
         /// Resolves the primitive type from the <see cref="MetaRepository"/>. 
         /// </summary>
         /// <typeparam name="T">The primitve type to resolve.</typeparam>
-        public IPrimitiveType ResolvePrimitve<T>() {
+        /// <returns>The resolved <see cref="IPrimitiveType"/> or <see langword="null"/> if none could be resolved.</returns>
+        public IPrimitiveType? ResolvePrimitve<T>() {
             Aliases.TryGetValue(typeof(T), out var primitiveName);
             primitiveName ??= typeof(T).Name;
 
-            return ((IPrimitiveType)(MetaRepository.Instance.Resolve($"http://nmf.codeplex.com/nmeta/#//{primitiveName}")));
+            if (MetaRepository.Instance.Resolve($"http://nmf.codeplex.com/nmeta/#//{primitiveName}") is IPrimitiveType resolvedPrimitive) {
+                return resolvedPrimitive;
+            }
+            else {
+                return null;
+            }
         }
     } 
 }
