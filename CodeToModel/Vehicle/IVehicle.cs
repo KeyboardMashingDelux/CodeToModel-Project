@@ -2,6 +2,7 @@
 using NMF.Expressions;
 using NMF.Models;
 using CTMLib;
+using NMF.Models.Tests.Railway;
 
 [assembly: ModelMetadata("http://github.com/CodeToModel", "CodeToModel.Vehicle.Bike.nmeta")]
 
@@ -13,10 +14,15 @@ namespace CodeToModel.Vehicle {
         IListExpression<IWheel> Wheels { get; }
 
         public ICollectionExpression<ILight> Lights();
+
+        public IRailwayElement RailwayElement { get; set; }
     }
 
     [ModelInterface]
     public interface IBicylce : IVehicle, IModelElement {
+
+        [Refines(nameof(Lights))]
+        public IOrderedSetExpression<ITailLight> TailLights();
 
         [Refines(nameof(Wheels))]
         IBikeWheel FrontWheel { get; set; }
@@ -24,16 +30,14 @@ namespace CodeToModel.Vehicle {
         [Refines(nameof(Wheels))]
         IBikeWheel RearWheel { get; set; } 
 
-        // Geht weil IOrderedSetExpression auch Ordered -> ISetExpression ist nicht Ordered
-        // Wenn wheels ICollectionExpression -> Dann kann alle Expression sein
         [Refines(nameof(Wheels))]
-        IOrderedSetExpression<IBikeWheel> HelperWheels { get; } // Referenz -> Refines = wheelsModelElement
+        IOrderedSetExpression<IWheel> HelperWheels { get; } 
 
         [Refines(nameof(Wheels))]
         ISetExpression<IBikeWheel> MoreWheels { get; } // Nicht erlaubt
 
-        [Refines(nameof(Lights))]
-        public IOrderedSetExpression<ITailLight> TailLights(); // TODO Warum darf kein ISetExpression sein?
+        [Refines(nameof(RailwayElement))]
+        public ISemaphore Semaphore { get; set; }
     }
 
     [ModelInterface]

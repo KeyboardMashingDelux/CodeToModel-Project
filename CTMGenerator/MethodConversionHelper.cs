@@ -55,10 +55,10 @@ namespace CTMGenerator {
                         operation.Type = GetPrimitiveType(specialType);
                     }
                     else {
-                        string refName = (isCollection ? typeArgument : returnType).Name;
+                        ITypeSymbol refType = isCollection ? typeArgument : returnType;
                         RefTypeInfos.Add(
-                            new TypeHelper(operation, 
-                                           refName,
+                            new TypeHelper(operation,
+                                           refType,
                                            ModelBuilderHelper.GetRefinesTarget(methodAttributes)));
                     }
                 }

@@ -44,4 +44,10 @@
 	  <Folder Include="Models\" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Reference Include="Models.Tests">
+	    <HintPath>..\..\NMF-main\Build\Tests\net9.0\Models.Tests.dll</HintPath>
+	  </Reference>
+	</ItemGroup>
+
 </Project>

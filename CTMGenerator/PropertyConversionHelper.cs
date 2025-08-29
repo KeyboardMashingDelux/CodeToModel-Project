@@ -88,10 +88,12 @@ namespace CTMGenerator {
                         Summary = ModelBuilderHelper.GetElementSummary(property)
                     };
 
-                    string refName = (isCollection ? typeArgument : type).Name;
+
+
+                    ITypeSymbol refType = isCollection ? typeArgument : type;
                     RefTypeInfos.Add(
                         new TypeHelper(reference, 
-                                       refName,
+                                       refType,
                                        ModelBuilderHelper.GetRefinesTarget(propertyAttributes),
                                        Utilities.GetSecondString(propertyAttributes, nameof(OppositeAttribute)) ?? ""));
 

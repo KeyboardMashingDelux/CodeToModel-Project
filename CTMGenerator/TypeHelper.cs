@@ -1,6 +1,8 @@
-﻿using NMF.Expressions;
+﻿using Microsoft.CodeAnalysis;
+using NMF.Expressions;
 using NMF.Models;
 using NMF.Models.Meta;
+using IOperation = NMF.Models.Meta.IOperation;
 using Attribute = NMF.Models.Meta.Attribute;
 
 namespace CTMGenerator {
@@ -18,6 +20,8 @@ namespace CTMGenerator {
 
         public IParameter? Parameter { get; private set; }
 
+        public readonly ITypeSymbol? TypeSymbol;
+
         private readonly string TypeName;
 
         private readonly string OppositeName;
@@ -27,45 +31,69 @@ namespace CTMGenerator {
 
 
         /// <param name="attribute">Attribute which is missing a type.</param>
-        /// <param name="typeName">Name of the missing type reference. Name and System type should match.</param>
+        /// <param name="typeSymbol">Type symbol of the missing type reference.</param>
         /// <param name="refinesName">Name of the type which refines this type.</param>
         /// <param name="oppositeName">Name of the opposite type of this type.</param>
-        public TypeHelper(IAttribute attribute, string typeName = "", string refinesName = "", string oppositeName = "") {
+        public TypeHelper(IAttribute attribute, ITypeSymbol? typeSymbol = null, string refinesName = "", string oppositeName = "") {
+            if (typeSymbol != null) {
+                TypeSymbol = typeSymbol;
+                TypeName = typeSymbol.Name;
+            }
+            else {
+                TypeName = "";
+            }
             AttributeType = attribute;
-            TypeName = typeName;
             OppositeName = oppositeName;
             RefinesName = refinesName;
         }
 
         /// <param name="reference">Reference which is missing a type.</param>
-        /// <param name="typeName">Name of the missing type reference. Name and System type should match.</param>
+        /// <param name="typeSymbol">Type symbol of the missing type reference.</param>
         /// <param name="refinesName">Name of the type which refines this type.</param>
         /// <param name="oppositeName">Name of the opposite type of this type.</param>
-        public TypeHelper(IReference reference, string typeName = "", string refinesName = "", string oppositeName = "") {
+        public TypeHelper(IReference reference, ITypeSymbol? typeSymbol = null, string refinesName = "", string oppositeName = "") {
+            if (typeSymbol != null) {
+                TypeSymbol = typeSymbol;
+                TypeName = typeSymbol.Name;
+            }
+            else {
+                TypeName = "";
+            }
             Reference = reference;
-            TypeName = typeName;
             OppositeName = oppositeName;
             RefinesName = refinesName;
         }
 
         /// <param name="operation">Operation which is missing a type.</param>
-        /// <param name="typeName">Name of the missing type reference. Name and System type should match.</param>
+        /// <param name="typeSymbol">Type symbol of the missing type reference.</param>
         /// <param name="refinesName">Name of the type which refines this type.</param>
         /// <param name="oppositeName">Name of the opposite type of this type.</param>
-        public TypeHelper(IOperation operation, string typeName = "", string refinesName = "", string oppositeName = "") {
+        public TypeHelper(IOperation operation, ITypeSymbol? typeSymbol = null, string refinesName = "", string oppositeName = "") {
+            if (typeSymbol != null) {
+                TypeSymbol = typeSymbol;
+                TypeName = typeSymbol.Name;
+            }
+            else {
+                TypeName = "";
+            }
             Operation = operation;
-            TypeName = typeName;
             OppositeName = oppositeName;
             RefinesName = refinesName;
         }
 
         /// <param name="parameter">Parameter which is missing a type.</param>
-        /// <param name="typeName">Name of the missing type reference. Name and System type should match.</param>
+        /// <param name="typeSymbol">Type symbol of the missing type reference.</param>
         /// <param name="refinesName">Name of the type which refines this type.</param>
         /// <param name="oppositeName">Name of the opposite type of this type.</param>
-        public TypeHelper(IParameter parameter, string typeName = "", string refinesName = "", string oppositeName = "") {
+        public TypeHelper(IParameter parameter, ITypeSymbol? typeSymbol = null, string refinesName = "", string oppositeName = "") {
+            if (typeSymbol != null) {
+                TypeSymbol = typeSymbol;
+                TypeName = typeSymbol.Name;
+            }
+            else {
+                TypeName = "";
+            }
             Parameter = parameter;
-            TypeName = typeName;
             OppositeName = oppositeName;
             RefinesName = refinesName;
         }
@@ -97,7 +125,7 @@ namespace CTMGenerator {
             if (refinesAttribute != null) {
                 if ((IsCollectionExpression(refinesAttribute)
                     || (!refinesAttribute.IsUnique && AttributeType.IsOrdered == refinesAttribute.IsOrdered))
-                    && AttributeType.Type.Name.Equals(refinesAttribute.Type.Name)
+                    && AttributeType.Type == refinesAttribute.Type
                     && IsBaseTypeOf(AttributeType.Parent, refinesAttribute.Parent)) {
                     AttributeType.Refines = refinesAttribute;
                     return true;
@@ -116,7 +144,7 @@ namespace CTMGenerator {
             if (refinesReference != null) {
                 if ((IsCollectionExpression(refinesReference)
                     || (!refinesReference.IsUnique && Reference.IsOrdered == refinesReference.IsOrdered)) 
-                    && IsSubClass(Reference.ReferenceType, refinesReference.ReferenceType) // TODO unterklasse erlaubt auch außerhalb model
+                    && IsBaseTypeOf(Reference.ReferenceType, refinesReference.ReferenceType) 
                     && IsBaseTypeOf(Reference.Parent, refinesReference.Parent)) {
                     Reference.Refines = refinesReference;
                     return true;
@@ -135,7 +163,7 @@ namespace CTMGenerator {
             if (refinesOperation != null) {
                 if ((IsCollectionExpression(refinesOperation)
                     || (!refinesOperation.IsUnique && Operation.IsOrdered == refinesOperation.IsOrdered))
-                    && IsSubClass(Operation.Type, refinesOperation.Type) // TODO unterklasse erlaubt auch außerhalb model
+                    && IsBaseTypeOf(Operation.Type, refinesOperation.Type)
                     && IsBaseTypeOf(Operation.Parent, refinesOperation.Parent)) {
                     Operation.Refines = refinesOperation;
                     return true;
@@ -226,7 +254,7 @@ namespace CTMGenerator {
         private IPrimitiveType GetPrimitiveType() {
             return new PrimitiveType() {
                 Name = TypeName,
-                SystemType = TypeName
+                SystemType = TypeSymbol?.ToDisplayString() ?? TypeName
             };
         }
 
@@ -283,26 +311,14 @@ namespace CTMGenerator {
 
         private bool IsBaseTypeOf(IModelElement element, IModelElement baseElement) {
             if (element is IClass typeClass && baseElement is IClass baseTypeClass) {
-                return typeClass.BaseTypes.Contains(baseTypeClass);
-            }
-
-            return false;
-        }
-
-        private bool IsSubClass(IModelElement subClass, IModelElement baseClass) {
-            IModelElement currentClass = subClass;
-            while (currentClass != null && baseClass != null) {
-                if (currentClass.ClassName.Equals(baseClass.ClassName)) {
-                    return true;
-                }
-                currentClass = currentClass.Parent;
+                return baseTypeClass.IsAssignableFrom(typeClass);
             }
 
             return false;
         }
 
         private bool IsCollectionExpression(ITypedElement element) {
-            if (element.UpperBound > 1 && !element.IsUnique && !element.IsOrdered) {
+            if ((element.UpperBound > 1 || element.UpperBound == -1) && !element.IsUnique && !element.IsOrdered) {
                 return true;
             }
 

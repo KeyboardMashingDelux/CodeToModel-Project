@@ -4,9 +4,9 @@ using NMF.Expressions;
 
 [assembly: ModelMetadata("http://github.com/CodeToModel", "CodeToModel.Example.Sentence.nmeta")]
 
-//[assembly: ModelMetadata("http://github.com/CodeToModel", "TEST.ASSEMBLY.ANALYZER.UNESCESSARY.nmeta")]
+[assembly: ModelMetadata("http://github.com/CodeToModel", "TEST.ASSEMBLY.ANALYZER.UNESCESSARY.nmeta")]
 
-//[assembly: ModelMetadata("http://github.com/CodeToModel", "FAIL")]
+[assembly: ModelMetadata("http://github.com/CodeToModel", "FAIL")]
 
 
 namespace CodeToModel.Example {
@@ -25,14 +25,12 @@ namespace CodeToModel.Example {
         [UpperBound(64)] 
         [LowerBound(0)]
         public IListExpression<IWord> Words { get; }
-        // Analyzer -> XExpressio = Kein set nur get
 
         public ISetExpression<SentenceTypes> SentenceTypes { get; }
 
         public SentenceTypes MainSentenceType { get; set; }
 
         public IWord FirstWord { get; set; }
-        // Analyzer -> Keine XExpressio = Unbedingt set & get
 
         public int? WordCount { get; set; }
 

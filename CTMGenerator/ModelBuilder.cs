@@ -155,7 +155,9 @@ namespace CTMGenerator {
                 }
 
                 // Analyzer should gurantee that the first letter of each interface is an "I"
-                INamedTypeSymbol classElement = NamespaceSymbols["I" + classType.Name];
+                if (!NamespaceSymbols.TryGetValue("I" + classType.Name, out INamedTypeSymbol classElement)) {
+                    continue;
+                }
                 ImmutableArray<AttributeData> classAttributes = classElement.GetAttributes();
 
                 // Add instanceof IClass
@@ -235,10 +237,18 @@ namespace CTMGenerator {
                 TypeHelper refTypeInfo = RefTypeInfos[i];
 
                 if (!refTypeInfo.SetType(Namespace.Types) && refTypeInfo.Reference != null) {
-                    if (refTypeInfo.Reference.Parent is IClass referenceParent) {
+                    string? modelTypeURI;
+                    if (refTypeInfo.TypeSymbol != null 
+                        && Utilities.IsValidInterfaceName(refTypeInfo.TypeSymbol.Name)
+                        && (modelTypeURI = ModelBuilderHelper.GetModelURI(refTypeInfo.TypeSymbol)) != null
+                        && MetaRepository.Instance.Resolve(modelTypeURI) is IClass resolvedClass) {
+                        refTypeInfo.Reference.ReferenceType = resolvedClass;
+                    }
+                    else if (refTypeInfo.Reference.Parent is IClass referenceParent) {
                         referenceParent.References.Remove(refTypeInfo.Reference);
                         IAttribute convertedReference = refTypeInfo.ReferenceToAttribute(Namespace.Types);
                         referenceParent.Attributes.Add(convertedReference);
+
                         if (referenceParent.Identifier != null 
                             && referenceParent.Identifier.Name.EndsWith(convertedReference.Name)
                             && referenceParent.Identifier.Name.StartsWith(Utilities.REFIDATTRIBUTE)) {
@@ -264,7 +274,7 @@ namespace CTMGenerator {
         /// </summary>
         /// <exception cref="InvalidOperationException"></exception>
         public void DoSave() {
-            if (!string.IsNullOrWhiteSpace(OutputPath)) {
+            if (!string.IsNullOrWhiteSpace(OutputPath) && !Namespace.Types.IsNullOrEmpty()) {
                 ModelRepository.Save(Namespace, $"{OutputPath}/{Name}.{Suffix}", true);
             }
         }
@@ -273,9 +283,9 @@ namespace CTMGenerator {
         /// Generates source code from the model constructed with <see cref="CreateModel"/>.
         /// </summary>
         /// <returns>The generated source code</returns>
-        public string DoCreateCode() {
-            if (string.IsNullOrWhiteSpace(OutputPath)) {
-                return "";
+        public string? DoCreateCode() {
+            if (Namespace.Types.IsNullOrEmpty()) {
+                return null;
             }
 
             // Creates compile unit from Namespace data (Code model - Keine Datei - Sprachunabhängig

@@ -57,8 +57,8 @@ namespace CTMGenerator {
                     parameter.Type = GetPrimitiveType(checkType.SpecialType);
                 }
                 else {
-                    string refName = (isCollection ? typeArgument : type).Name;
-                    RefTypeInfos.Add(new TypeHelper(parameter, refName));
+                    ITypeSymbol refType = isCollection ? typeArgument : type;
+                    RefTypeInfos.Add(new TypeHelper(parameter, refType));
                 }
 
                     Parameters.Add(parameter);

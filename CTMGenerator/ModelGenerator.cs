@@ -105,7 +105,10 @@ namespace CTMGenerator {
             foreach (ModelBuilder model in models.Values) {
                 model.CreateModel();
                 model.DoSave();
-                context.AddSource($"{model.GetName()}.g.cs", model.DoCreateCode());
+                string? code = model.DoCreateCode();
+                if (code != null) {
+                    context.AddSource($"{model.GetName()}.g.cs", code);
+                }
             }
         }
 

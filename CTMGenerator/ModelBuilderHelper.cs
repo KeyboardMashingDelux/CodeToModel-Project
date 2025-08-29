@@ -1,5 +1,4 @@
-﻿
-using CTMLib;
+﻿using CTMLib;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NMF.Models;
@@ -45,7 +44,7 @@ namespace CTMGenerator {
         }
 
         /// <summary>
-        /// Helper method, calls <see cref="GetFirstString"/> with the name of the <see cref="Refines"/> attribute.
+        /// Helper method, calls <see cref="Utilities.GetFirstString"/> with the name of the <see cref="Refines"/> attribute.
         /// </summary>
         /// <returns>An empty string instead of <see langword="null"/> or the <see cref="Refines"/> attribute target.</returns>
         public static string GetRefinesTarget(ImmutableArray<AttributeData> attributes) {
@@ -183,6 +182,10 @@ namespace CTMGenerator {
             }
 
             return false;
+        }
+
+        public static string? GetModelURI(ITypeSymbol type) {
+            return Utilities.GetFirstString(type.GetAttributes(), nameof(ModelRepresentationClassAttribute));
         }
 
 
