@@ -170,7 +170,7 @@ namespace CTMAnalyzer {
 
             if (typeName.Equals(nameof(SortedSet<string>))) {
                 diagnostic = Diagnostic.Create(
-                                CTMDiagnostics.IListExpressionInstead,
+                                CTMDiagnostics.IOrderedSetExpressionInstead,
                                 propertyLocation,
                                 propertyName);
                 context.ReportDiagnostic(diagnostic);

@@ -25,27 +25,23 @@ namespace CTMCodeFixes {
             );
 
         /// <inheritdoc/>
-        public override Task RegisterCodeFixesAsync(CodeFixContext context) {
+        public sealed override Task RegisterCodeFixesAsync(CodeFixContext context) {
             CodeAction action;
-
-            Debugger.Launch();
 
             int i = 0;
             foreach (var diagnostic in context.Diagnostics) {
                 string title = diagnostic.Descriptor.Title.ToString();
                 string equivalanceToken = CodeFixesHelper.TrimAllWithInplaceCharArray(title.ToString()) + i++;
 
-                Debug.WriteLine(diagnostic.Id);
-
                 if (diagnostic.Id == CTMDiagnostics.RequiredModelInterfaceKeyword.Id) {
-                    action = CodeAction.Create(title,
-                                            token => AddPartialKeyword(context, diagnostic, token),
-                                            equivalanceToken);
+                    action = CodeAction.Create("Add partial modifier",
+                        token => AddPartialKeyword(context, diagnostic, token),
+                        equivalanceToken + "AddPartialKeyword");
                     context.RegisterCodeFix(action, diagnostic);
 
-                    action = CodeAction.Create(title,
+                    action = CodeAction.Create("Implement IModelElement",
                                             token => AddIModelElement(context, diagnostic, token),
-                                            equivalanceToken);
+                                             equivalanceToken + "AddIModelElement");
                     context.RegisterCodeFix(action, diagnostic);
                 }
                 else {
@@ -93,7 +89,7 @@ namespace CTMCodeFixes {
             if (interfaceDeclaration == null)
                 return context.Document;
 
-            NameSyntax baseTypeName = SyntaxFactory.ParseName("NMF.Model.IModelElement");
+            NameSyntax baseTypeName = SyntaxFactory.ParseName("IModelElement");
             SimpleBaseTypeSyntax newBaseType = SyntaxFactory.SimpleBaseType(baseTypeName);
             InterfaceDeclarationSyntax newDeclaration = interfaceDeclaration.AddBaseListTypes(newBaseType);
             SyntaxNode newRoot = root.ReplaceNode(interfaceDeclaration, newDeclaration);
@@ -107,20 +103,29 @@ namespace CTMCodeFixes {
 
             SyntaxNode? root = await context.Document.GetSyntaxRootAsync(cancellationToken);
 
-            if (root is null)
+            if (root is null) { 
                 return context.Document;
+        }
 
-            PropertyDeclarationSyntax? propertyDeclaration = CodeFixesHelper.FindPropertyDeclaration(diagnostic, root);
+        PropertyDeclarationSyntax? propertyDeclaration = CodeFixesHelper.FindPropertyDeclaration(diagnostic, root);
 
-            if (propertyDeclaration == null)
+            if (propertyDeclaration == null) { 
                 return context.Document;
+            }
 
-            
-            PropertyDeclarationSyntax newDeclaration = propertyDeclaration.WithType(CodeFixesHelper.GetReplaceType(diagnostic));
-            SyntaxNode newRoot = root.ReplaceNode(propertyDeclaration, newDeclaration);
-            Document newDoc = context.Document.WithSyntaxRoot(newRoot);
+            TypeSyntax propertyType = propertyDeclaration.Type;
+            if (propertyType is GenericNameSyntax genericName) {
 
-            return newDoc;
+                TypeSyntax newType = CodeFixesHelper.GetReplaceType(diagnostic, genericName.TypeArgumentList);
+                newType = newType.WithTriviaFrom(propertyDeclaration.Type);
+                PropertyDeclarationSyntax newDeclaration = propertyDeclaration.WithType(newType);
+                SyntaxNode newRoot = root.ReplaceNode(propertyDeclaration, newDeclaration);
+                Document newDoc = context.Document.WithSyntaxRoot(newRoot);
+
+                return newDoc;
+            }
+
+            return context.Document;
         }
 
         /// <inheritdoc/>

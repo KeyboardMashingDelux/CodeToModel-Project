@@ -11,12 +11,6 @@ namespace CTMCodeFixes {
     /// </summary>
     public class CodeFixesHelper {
 
-        private static readonly TypeSyntax typeIListExpression = SyntaxFactory.ParseName("NMF.Expressions.IListExpression");
-
-        private static readonly TypeSyntax typeISetExpression = SyntaxFactory.ParseName("NMF.Expressions.ISetExpression");
-
-        private static readonly TypeSyntax typeIOrderedSetExpression = SyntaxFactory.ParseName("NMF.Collections.Generic.IOrderedSetExpression");
-
 
 
         /// <summary>
@@ -53,16 +47,17 @@ namespace CTMCodeFixes {
         /// Deceides the type which replaces a non NMF collection type.
         /// </summary>
         /// <param name="diagnostic">An <see langword="property"/> diagnostic.</param>
+        /// <param name="arguments">The arguments of the old type.</param>
         /// <returns>The new type in form of a <see cref="TypeSyntax"/>.</returns>
-        public static TypeSyntax GetReplaceType(Diagnostic diagnostic) {
+        public static TypeSyntax GetReplaceType(Diagnostic diagnostic, TypeArgumentListSyntax arguments) {
             if (diagnostic.Id.Equals(CTMDiagnostics.ISetExpressionInstead.Id)) {
-                return typeISetExpression;
+                return SyntaxFactory.GenericName(SyntaxFactory.Identifier("ISetExpression"), arguments);
             }
             else if (diagnostic.Id.Equals(CTMDiagnostics.IOrderedSetExpressionInstead.Id)) {
-                return typeIOrderedSetExpression;
+                return SyntaxFactory.GenericName(SyntaxFactory.Identifier("IOrderedSetExpression"), arguments);
             }
             else { // Assume IListExpression is valid 
-                return typeIListExpression;
+                return SyntaxFactory.GenericName(SyntaxFactory.Identifier("IListExpression"), arguments);
             }
         }
 

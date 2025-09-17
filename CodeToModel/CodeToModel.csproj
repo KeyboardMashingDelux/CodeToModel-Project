@@ -32,7 +32,7 @@
 		<ProjectReference Include="..\CTMGenerator\CTMGenerator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
 		<ProjectReference Include="..\CTMLib\CTMLib.csproj" />
 		<ProjectReference Include="..\CTMAnalyzer\CTMAnalyzer.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
-		<ProjectReference Include="..\CTMCodeFixes\CTMCodeFixes.csproj" />
+		<ProjectReference Include="..\CTMCodeFixes\CTMCodeFixes.csproj"  ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
 	</ItemGroup>
 
 	<ItemGroup>

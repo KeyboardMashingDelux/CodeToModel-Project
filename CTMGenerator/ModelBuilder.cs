@@ -111,7 +111,7 @@ namespace CTMGenerator {
             Enumeration enumeration = new() {
                 Name = element.Name,
                 Remarks = ModelBuilderHelper.GetElementRemarks(element),
-                Summary = ModelBuilderHelper.GetDocElementText(element, Utilities.SUMMARY)
+                Summary = ModelBuilderHelper.GetElementSummary(element)
             };
 
             List<IFieldSymbol> literalSymbols = element.GetMembers()
@@ -292,7 +292,7 @@ namespace CTMGenerator {
             }
 
             // Creates compile unit from Namespace data (Code model - Keine Datei - Sprachunabhängig
-            var compileUnit = MetaFacade.CreateCode(Namespace, AmbientName);
+            CodeCompileUnit compileUnit = MetaFacade.CreateCode(Namespace, AmbientName);
             // Interfaces need to be removed or edited
             AdaptInterfaces(compileUnit);
 
