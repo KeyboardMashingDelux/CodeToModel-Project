@@ -236,7 +236,6 @@ namespace CTMAnalyzer {
                         context.ReportDiagnostic(diagnostic);
                     }
                     else if (!namespaces.Contains(string.Join(".", resourceNameParts.Take(resourceNameParts.Length - 2)))) {
-                        Debugger.Break();
                         Diagnostic diagnostic = Diagnostic.Create(
                             CTMDiagnostics.AssemblyMetadataNoNamespaceDescriptor,
                             attribute.GetLocation(),
