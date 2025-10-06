@@ -8,6 +8,9 @@ using NMF.Models;
 
 namespace CTMTests {
 
+    /// <summary>
+    /// Conecept testcases for testing analyzers & code fixes
+    /// </summary>
     public class CTMAnalyzerCodeFixTest {
 
         private const string TestCode = $@"
@@ -31,7 +34,7 @@ namespace CodeToModel.Example {{
 }}
 ";
 
-        private static void configureTestState(SolutionState testState, string source, params DiagnosticResult?[]? expected) {
+        private static void ConfigureTestState(SolutionState testState, string source, params DiagnosticResult?[]? expected) {
             testState.Sources.Add(source);
             if (expected != null) {
                 foreach (var expectedItem in expected) {
@@ -47,22 +50,28 @@ namespace CodeToModel.Example {{
         }
 
         [Fact]
-        public async Task analyzeVerify() {
+        public async Task AnalyzeVerify() {
             DiagnosticResult interfaceModfiers = new DiagnosticResult(CTMDiagnostics.RequiredModelInterfaceKeyword).WithLocation(13, 22).WithArguments("ISentence");
+            // Gets correctly reported in a test environment
+            DiagnosticResult assemblyNoNamespace = new DiagnosticResult(CTMDiagnostics.AssemblyMetadataNoNamespaceDescriptor).WithLocation(9, 12).WithArguments("TEST.ANALYZER.ASSEMBLY.UNESCESSARY.nmeta");
             DiagnosticResult listToExpression = new DiagnosticResult(CTMDiagnostics.IListExpressionInstead).WithLocation(17, 30).WithArguments("Words");
-            DiagnosticResult dumbResult = new DiagnosticResult(CTMDiagnostics.ModelInterfaceNoModelMetadataDescriptor).WithLocation(12, 5).WithArguments("Example", "ISentence");
+            // Only NMF collections have correct get/set checks since they should be used
+            DiagnosticResult getSetRequired = new DiagnosticResult(CTMDiagnostics.GetSetNeeded).WithLocation(17, 30).WithArguments("Words");
+            
             CSharpAnalyzerTest<CTMDiagnosticAnalyzer, DefaultVerifier> analyzerTest = new();
-            configureTestState(analyzerTest.TestState, TestCode, dumbResult, interfaceModfiers, listToExpression);
+            ConfigureTestState(analyzerTest.TestState, TestCode, listToExpression, assemblyNoNamespace, interfaceModfiers, getSetRequired);
             await analyzerTest.RunAsync();
         }
 
         [Fact]
-        public async Task codeFixVerify() {
+        public async Task CodeFixVerify() {
             DiagnosticResult interfaceModfiers = new DiagnosticResult(CTMDiagnostics.RequiredModelInterfaceKeyword).WithLocation(13, 22).WithArguments("ISentence");
+            DiagnosticResult assemblyNoNamespace = new DiagnosticResult(CTMDiagnostics.AssemblyMetadataNoNamespaceDescriptor).WithLocation(9, 12).WithArguments("TEST.ANALYZER.ASSEMBLY.UNESCESSARY.nmeta");
             DiagnosticResult listToExpression = new DiagnosticResult(CTMDiagnostics.IListExpressionInstead).WithLocation(17, 30).WithArguments("Words");
-            DiagnosticResult dumbResult = new DiagnosticResult(CTMDiagnostics.ModelInterfaceNoModelMetadataDescriptor).WithLocation(12, 5).WithArguments("Example", "ISentence");
+            // Only NMF collections have correct get/set checks since they should be used
+            DiagnosticResult getSetRequired = new DiagnosticResult(CTMDiagnostics.GetSetNeeded).WithLocation(17, 30).WithArguments("Words");
             var codeFixTest = new CSharpCodeFixTest<CTMDiagnosticAnalyzer, CTMCodeFixProvider, DefaultVerifier> { };
-            configureTestState(codeFixTest.TestState, TestCode, interfaceModfiers, listToExpression, dumbResult);
+            ConfigureTestState(codeFixTest.TestState, TestCode, listToExpression, assemblyNoNamespace, interfaceModfiers, getSetRequired);
             await codeFixTest.RunAsync();
         }
 
