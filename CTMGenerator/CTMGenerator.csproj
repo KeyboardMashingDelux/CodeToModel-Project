@@ -7,24 +7,44 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
 		<IsRoslynComponent>true</IsRoslynComponent>
+		<IsRoslynAnalyzer>true</IsRoslynAnalyzer>
+		<IncludeBuildOutput>false</IncludeBuildOutput>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	</PropertyGroup>
 
-	<ItemGroup>
-		<CompilerVisibleProperty Include="CompilerGeneratedFilesOutputPath" />
-	</ItemGroup>
+	<PropertyGroup Label="Package Details">
+		<Title>Code-First Modeling Generator</Title>
+		<Authors>Alexander Rosenberg</Authors>
+		<Description>Generator for a code-first modeling approch with NMF. Creates a NMF model and generates the matching implementation.</Description>
+		<Copyright>Copyright (c) Alexander Rosenberg 2025</Copyright>
+		<PackageProjectUrl>https://github.com/KeyboardMashingDelux/CodeToModel-Project</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/KeyboardMashingDelux/CodeToModel-Project</RepositoryUrl>
+		<PackageTags>MDE, modeling, NMF, source code generator, roslyn</PackageTags>
+		<PackageReleaseNotes>Inital release</PackageReleaseNotes>
+		<Version>1.0.0</Version>
+	</PropertyGroup>
 
-	<ItemGroup Label="Package References">
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" PrivateAssets="all" />
-		<PackageReference Include="NMF-Basics" Version="2.0.449" GeneratePathProperty="true" PrivateAssets="all" />
-		<PackageReference Include="NMF-Transformations" Version="2.0.439" GeneratePathProperty="true" PrivateAssets="all" />
+	<ItemGroup Label="Private Package References">
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" GeneratePathProperty="true" PrivateAssets="all" />
+		<PackageReference Include="NMF-Transformations" Version="2.0.449" GeneratePathProperty="true" PrivateAssets="all" />
 		<PackageReference Include="NMF-Repository" Version="2.0.449" GeneratePathProperty="true" PrivateAssets="all" />
-		<PackageReference Include="NMF-MetaTransformation" Version="2.0.439" GeneratePathProperty="true" PrivateAssets="all" />
+		<PackageReference Include="NMF-MetaTransformation" Version="2.0.449" GeneratePathProperty="true" PrivateAssets="all" />
 		<PackageReference Include="System.CodeDom" Version="9.0.6" GeneratePathProperty="true" PrivateAssets="all" />
 	</ItemGroup>
 
+	<ItemGroup Label="Package References">
+		<PackageReference Include="NMF-Basics" GeneratePathProperty="true" Version="2.0.449" />
+	</ItemGroup>
+
+	<ItemGroup Label="Library Project Reference">
+		<ProjectReference Include="..\CTMLib\CTMLib.csproj" />
+	</ItemGroup>
+
+	<Import Project="..\CTMUtilities\CTMUtilities.projitems" Label="Shared" />
+
 	<ItemGroup>
-		<ProjectReference Include="..\CTMLib\CTMLib.csproj" PrivateAssets="all" />
+		<CompilerVisibleProperty Include="CompilerGeneratedFilesOutputPath" />
 	</ItemGroup>
 
 	<PropertyGroup>
@@ -34,8 +54,10 @@
 	<Target Name="GetDependencyTargetPaths" AfterTargets="ResolvePackageDependenciesForBuild">
 		<ItemGroup>
 			<TargetPathWithTargetPlatformMoniker Include="@(ResolvedCompileFileDefinitions)" IncludeRuntimeDependency="false" />
+			<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+			<None Include="@(ResolvedCompileFileDefinitions)" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+			<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="lib/netstandard2.0" Visible="false" />
 		</ItemGroup>
 	</Target>
-
-	<Import Project="..\CTMUtilities\CTMUtilities.projitems" Label="Shared"/>
+	
 </Project>

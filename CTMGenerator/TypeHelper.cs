@@ -356,7 +356,8 @@ namespace CTMGenerator {
         /// <summary>
         /// Tries to get the <see cref="IReference"/> by the given name from the given types collection.
         /// </summary>
-        ///         /// <param name="types">List of available <see cref="IType"/>s.</param>
+        /// <param name="types">List of available <see cref="IType"/>s.</param>
+        /// <param name="compareName">Name of the reference wanted.</param>
         /// <returns>The found <see cref="IReference"/> or <see langword="null"/> if none was found.</returns>
         private IReference? GetReference(ICollectionExpression<IType> types, string compareName) {
             foreach (IType type in types) {

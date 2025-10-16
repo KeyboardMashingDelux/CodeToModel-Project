@@ -92,7 +92,7 @@ namespace CTMAnalyzer {
         /// <summary>
         /// Checks if the given list of <see cref="INamedTypeSymbol"/> has a member by name.
         /// </summary>
-        /// <returns><see langword="true"/> if a member of this name was found, otherwise <see langword="false"/>./returns>
+        /// <returns><see langword="true"/> if a member of this name was found, otherwise <see langword="false"/>.</returns>
         public static bool HasMember(ImmutableArray<INamedTypeSymbol> members, string memberName) {
             foreach (INamedTypeSymbol member in members) {
                 if (member.Name == memberName) {

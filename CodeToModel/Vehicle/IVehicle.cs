@@ -21,8 +21,8 @@ namespace CodeToModel.Vehicle {
     [ModelInterface]
     public interface IBicylce : IVehicle, IModelElement {
 
-        [Refines(nameof(Lights))]
-        public IOrderedSetExpression<ITailLight> TailLights();
+        //[Refines(nameof(Lights))]
+        //public IOrderedSetExpression<ITailLight> TailLights();
 
         [Refines(nameof(Wheels))]
         IBikeWheel FrontWheel { get; set; }

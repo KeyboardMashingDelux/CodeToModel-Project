@@ -7,22 +7,39 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
 		<IsRoslynComponent>true</IsRoslynComponent>
+		<IsRoslynAnalyzer>true</IsRoslynAnalyzer>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	</PropertyGroup>
 
-	<ItemGroup>
+	<PropertyGroup>
+		<Title>Code-First Modeling Analyzer</Title>
+		<Authors>Alexander Rosenberg</Authors>
+		<Description>Analyzer for the CTMGenerator Package.</Description>
+		<Copyright>Copyright (c) Alexander Rosenberg 2025</Copyright>
+		<PackageProjectUrl>https://github.com/KeyboardMashingDelux/CodeToModel-Project</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/KeyboardMashingDelux/CodeToModel-Project</RepositoryUrl>
+		<PackageTags>MDE, modeling, NMF, analyzer, roslyn</PackageTags>
+		<PackageReleaseNotes>Inital release</PackageReleaseNotes>
+		<Version>1.0.0</Version>
+	</PropertyGroup>
+
+	<ItemGroup Label="Private Package References">
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" PrivateAssets="all" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<PackageReference Include="NMF-Basics" Version="2.0.449" PrivateAssets="all" />
+	<ItemGroup Label="Package References">
+		<PackageReference Include="NMF-Basics" Version="2.0.449" />
+	</ItemGroup>
+
+	<ItemGroup Label="Library and Generator Project References">
+		<ProjectReference Include="..\CTMGenerator\CTMGenerator.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\CTMGenerator\CTMGenerator.csproj" PrivateAssets="All" SetTargetFramework="TargetFramework=netstandard2.0" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\CTMLib\CTMLib.csproj" PrivateAssets="all" />
+		<None Update="tools\*.ps1" CopyToOutputDirectory="Always" Pack="true" PackagePath="tools" />
+		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="lib/netstandard2.0" Visible="false" />
 	</ItemGroup>
 </Project>

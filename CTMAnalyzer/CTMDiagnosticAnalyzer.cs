@@ -152,7 +152,7 @@ namespace CTMAnalyzer {
             string propertyName = property.Name;
             string typeName = propertyType.Name;
 
-            if (typeName.Equals(nameof(IList))) {
+            if (typeName.Equals(nameof(IList)) || typeName.Equals(nameof(List<int>))) {
                 diagnostic = Diagnostic.Create(
                                 CTMDiagnostics.IListExpressionInstead,
                                 propertyLocation,
@@ -160,7 +160,7 @@ namespace CTMAnalyzer {
                 context.ReportDiagnostic(diagnostic);
             }
 
-            if (typeName.Equals(nameof(ISet<string>))) {
+            if (typeName.Equals(nameof(ISet<string>)) || typeName.Equals(nameof(HashSet<int>))) {
                 diagnostic = Diagnostic.Create(
                                 CTMDiagnostics.ISetExpressionInstead,
                                 propertyLocation,

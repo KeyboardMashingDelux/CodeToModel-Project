@@ -5,15 +5,27 @@
 		<LangVersion>13.0</LangVersion>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 	</PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="NMF-Basics" Version="2.0.449" PrivateAssets="all" />
+	<PropertyGroup Label="Package Details">
+		<Title>Code-First Modeling Attribute Library</Title>
+		<Authors>Alexander Rosenberg</Authors>
+		<Description>Library with attributes to control the CTMGenerator.</Description>
+		<Copyright>Copyright (c) Alexander Rosenberg 2025</Copyright>
+		<PackageProjectUrl>https://github.com/KeyboardMashingDelux/CodeToModel-Project</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/KeyboardMashingDelux/CodeToModel-Project</RepositoryUrl>
+		<PackageTags>MDE, modeling, NMF, source code generator, roslyn</PackageTags>
+		<PackageReleaseNotes>Inital release.</PackageReleaseNotes>
+		<Version>1.0.0</Version>
+	</PropertyGroup>
+
+	<ItemGroup Label="Package References">
+		<PackageReference Include="NMF-Basics" Version="2.0.449" />
 	</ItemGroup>
 
-	<ItemGroup>
+	<ItemGroup Label="Private Package References">
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" PrivateAssets="all" />
 	</ItemGroup>
 </Project>

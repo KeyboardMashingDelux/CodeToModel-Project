@@ -5,15 +5,36 @@
 		<LangVersion>13.0</LangVersion>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
+		<IsRoslynComponent>true</IsRoslynComponent>
+		<IsRoslynAnalyzer>true</IsRoslynAnalyzer>
+		<IncludeBuildOutput>false</IncludeBuildOutput>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	</PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
+	<PropertyGroup>
+		<Title>Code-First Modeling Code Fixes</Title>
+		<Authors>Alexander Rosenberg</Authors>
+		<Description>Code Fixes for the CTMGenerator Package.</Description>
+		<Copyright>Copyright (c) Alexander Rosenberg 2025</Copyright>
+		<PackageProjectUrl>https://github.com/KeyboardMashingDelux/CodeToModel-Project</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/KeyboardMashingDelux/CodeToModel-Project</RepositoryUrl>
+		<PackageTags>MDE, modeling, NMF, code fixes, roslyn</PackageTags>
+		<PackageReleaseNotes>Inital release</PackageReleaseNotes>
+		<Version>1.0.0</Version>
+	</PropertyGroup>
+
+	<ItemGroup Label="Private Package References">
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" PrivateAssets="All" />
+	</ItemGroup>
+
+	<ItemGroup Label="Analyzer Project Reference">
+		<ProjectReference Include="..\CTMAnalyzer\CTMAnalyzer.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\CTMAnalyzer\CTMAnalyzer.csproj" PrivateAssets="all"/>
+		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="lib/netstandard2.0" Visible="false" />
 	</ItemGroup>
 
 </Project>
