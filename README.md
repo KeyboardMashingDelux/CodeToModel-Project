@@ -52,6 +52,11 @@ If declared in the interfaces file directly needs to be put above the namespace 
 [assembly: ModelMetadata("MODELURI", "NAME.PREFIX.SUFFIX")]
 ``` 
 
+> [!WARNING] 
+> Having two ModelMetadata entries with the same NAME attribute will stop the source code generator from running.
+> Each model only needs **one** ModelMetadata entry!
+
+
 ### ModelInterface
 
 Identfies a interface delcaration as part of a model.
@@ -109,7 +114,7 @@ public string SomeOperation();
 
 ### InstanceOf
 
-Identfies a interface delcaration as part of a model.
+Marks an model element as instance of another model element.
 
 ```C#
 [ModelInterface]
@@ -169,7 +174,11 @@ This behavior can be overriden by providing a **OutputPaths.xml** file, added vi
 </paths>
 ``` 
 
-**ALL** means this path will be used for every namespace which has no __previously__ defined path.
+> [!INFO] 
+> **ALL** means this path will be used for every namespace which has no __previously__ defined path.
+
+> [!INFO]
+> No paths will be created and have to already exist and be writable for the generator to work!
 
 ### Generated source code location
 
