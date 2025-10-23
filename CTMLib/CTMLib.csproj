@@ -19,6 +19,7 @@
 		<PackageTags>MDE, modeling, NMF, source code generator, roslyn</PackageTags>
 		<PackageReleaseNotes>Inital release.</PackageReleaseNotes>
 		<Version>1.0.0</Version>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 
 	<ItemGroup Label="Package References">
@@ -27,5 +28,12 @@
 
 	<ItemGroup Label="Private Package References">
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" PrivateAssets="all" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="README.md">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
 	</ItemGroup>
 </Project>

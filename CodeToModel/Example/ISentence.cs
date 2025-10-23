@@ -6,7 +6,7 @@ using NMF.Expressions;
 
 [assembly: ModelMetadata("http://github.com/CodeToModel", "TEST.ASSEMBLY.ANALYZER.UNESCESSARY.nmeta")]
 
-[assembly: ModelMetadata("http://github.com/CodeToModel", "FAIL")]
+//[assembly: ModelMetadata("http://github.com/CodeToModel", "FAIL")]
 
 
 namespace CodeToModel.Example {
