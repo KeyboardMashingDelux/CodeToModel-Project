@@ -174,10 +174,10 @@ This behavior can be overriden by providing a **OutputPaths.xml** file, added vi
 </paths>
 ``` 
 
-> [!INFO] 
+> [!NOTE] 
 > **ALL** means this path will be used for every namespace which has no __previously__ defined path.
 
-> [!INFO]
+> [!NOTE]
 > No paths will be created and have to already exist and be writable for the generator to work!
 
 ### Generated source code location
