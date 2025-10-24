@@ -87,11 +87,21 @@ public IListExpression<Object> objects { get; }
 
 ### Id
 
-Marks an attribute as identifier for this model.
+Marks an attribute as identifier for this model element.
 
 ```C#
 [Id]
-public string IdString { get; set; }
+public string UUID { get; set; }
+``` 
+
+### IdentifierScope
+
+Declares the scope of the identifier defined by the Id attribute in which this attribute is unique.
+
+```C#
+[ModelInterface]
+[IdentifierScope(NMF.Models.Meta.IdentifierScope.Global)]
+public partial interface ISomeElement {}
 ``` 
 
 ### IsAbstract
@@ -100,16 +110,16 @@ Tells the generator to generate a abstract implementation of this interface.
 
 ```C#
 [IsAbstract]
-public partial interface IMyExample {}
+public partial interface IAbstractElement {}
 ``` 
 
 ### IsContainment
 
-Marks a method as containment.
+Marks a method as containment making it a composition (child element).
 
 ```C#
 [IsContainment]
-public string SomeOperation();
+public IMyOtherModelElement MyChildModelElement { get; set; }
 ``` 
 
 ### InstanceOf
@@ -118,19 +128,33 @@ Marks an model element as instance of another model element.
 
 ```C#
 [ModelInterface]
-[InstanceOf("SuperExample")]
-public partial interface IMyExample : SuperExample {}
+[InstanceOf("IVehicle")]
+public partial interface IBike : IVehicle {}
 ``` 
 
-### IdentifierScope
+### Opposite
 
-Declares the scope of the identifier defined by the Id attribute.
+Marks a property from another model element as opposite of this element.
 
 ```C#
-[ModelInterface]
-[IdentifierScope(NMF.Models.Meta.IdentifierScope.Global)]
-public partial interface IMyExample {}
-``` 
+namespace Worksystems {
+
+    [ModelInterface]
+    public interface IWorkSystem : IModelElement {
+
+        [Opposite(typeof(IProcess), nameof(IProcess.AssignedWorkflowSystem))]
+        public IListExpression<IProcess> Processes { get; }
+    }
+
+    [ModelInterface]
+    public interface IProcess : IModelElement {
+
+        [Opposite(typeof(IWorkflowSystem), nameof(IWorkflowSystem.Processes))]
+        public IWorkflowSystem AssignedWorkflowSystem { get; set; }
+    }
+}
+```
+
 
 ### Refines
 
@@ -138,14 +162,19 @@ Declares that a property refines another property.
 
 ```C#
 [ModelInterface]
-public interface IMyExample : IModelElement {
-    IListExpression<IWheel> SomeList { get; }
+public interface IVehicle : IModelElement {
+
+    IListExpression<IWheel> Wheels { get; }
 }
 
 [ModelInterface]
-public interface IMyOtherExample : IMyExample, IModelElement {
-    [Refines(nameof(SomeList))]
-    IBikeWheel SomeProp { get; set; }
+public interface IBicylce : IVehicle, IModelElement {
+
+    [Refines(nameof(Wheels))]
+    IBikeWheel FrontWheel { get; set; }
+
+    [Refines(nameof(Wheels))]
+    IOrderedSetExpression<IWheel> HelperWheels { get; } 
 }
 
 [ModelInterface]
