@@ -97,6 +97,7 @@ namespace CTMGenerator {
                         LowerBound = GetLowerBound(propertyAttributes, IsNullable(type)),
                         UpperBound = GetUpperBound(propertyAttributes, isCollection),
                         Type = GetPrimitiveType(isCollection ? typeArgumentSpecialType : specialType),
+                        DefaultValue = ModelBuilderHelper.GetDefaultValue(propertyAttributes),
                         Remarks = ModelBuilderHelper.GetElementRemarks(property),
                         Summary = ModelBuilderHelper.GetElementSummary(property),
                     };
@@ -132,7 +133,8 @@ namespace CTMGenerator {
                         new TypeHelper(reference, 
                                        refType,
                                        ModelBuilderHelper.GetRefinesTarget(propertyAttributes),
-                                       Utilities.GetSecondString(propertyAttributes, nameof(OppositeAttribute)) ?? ""));
+                                       Utilities.GetSecondString(propertyAttributes, nameof(OppositeAttribute)) ?? "",
+                                       ModelBuilderHelper.GetDefaultValue(propertyAttributes)));
 
                     References.Add(reference);
 

@@ -61,6 +61,16 @@ namespace CTMGenerator {
         }
 
         /// <summary>
+        /// Retrieves the value of the <see cref="DefaultValue"/>.
+        /// </summary>
+        /// <returns>The default value as <see langword="string"/> or an empty <see langword="string"/> if this attribute does not exist</returns>
+        public static string? GetDefaultValue(ImmutableArray<AttributeData> attributes) {
+            var attribute = Utilities.GetAttributeByName(attributes, nameof(DefaultValue));
+            var ca = attribute?.ConstructorArguments;
+            return (string?)ca?[0].Value;
+        }
+
+        /// <summary>
         /// Convenienve method for <see cref="GetDocElementText"/> called with <see cref="Utilities.SUMMARY"/>.
         /// </summary>
         public static string? GetElementSummary(ISymbol element) {

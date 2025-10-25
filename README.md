@@ -77,13 +77,28 @@ public enum MyEnum {}
 
 ### UpperBound & LowerBound
 
-Gives a collection an upper and lower bound.
+Gives a collection an upper and lower bound. 
+In general the default values are as follows:
+* Non-Nullable: Lower = 1
+* Nullable: Lower = 0
+* Non-Collection: Upper = 1
+* Collection: Upper = -1
 
 ```C#
 [UpperBound(64)] 
 [LowerBound(0)]
 public IListExpression<Object> objects { get; }
 ``` 
+
+### DefaultValue
+
+Sets the default value of an attribute property.
+
+```C#
+[DefaultValue("ReplaceMe")]
+string Name { get; set; }
+``` 
+
 
 ### Id
 
@@ -115,7 +130,7 @@ public partial interface IAbstractElement {}
 
 ### IsContainment
 
-Marks a method as containment making it a composition (child element).
+Marks a property as containment making it a composition (child element).
 
 ```C#
 [IsContainment]

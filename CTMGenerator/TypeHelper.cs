@@ -52,6 +52,11 @@ namespace CTMGenerator {
         /// </summary>
         private readonly string RefinesName;
 
+        /// <summary>
+        /// Default value for references which may become attributes.
+        /// </summary>
+        private readonly string? RefDefaultValue;
+
 
 
         /// <param name="attribute">Attribute which is missing a type.</param>
@@ -75,7 +80,8 @@ namespace CTMGenerator {
         /// <param name="typeSymbol">Type symbol of the missing type reference.</param>
         /// <param name="refinesName">Name of the type which refines this type.</param>
         /// <param name="oppositeName">Name of the opposite type of this type.</param>
-        public TypeHelper(IReference reference, ITypeSymbol? typeSymbol = null, string refinesName = "", string oppositeName = "") {
+        /// <param name="defaultValue">Default value in case reference becomes an attribute.</param>
+        public TypeHelper(IReference reference, ITypeSymbol? typeSymbol = null, string refinesName = "", string oppositeName = "", string? defaultValue = null) {
             if (typeSymbol != null) {
                 TypeSymbol = typeSymbol;
                 TypeName = typeSymbol.Name;
@@ -86,6 +92,7 @@ namespace CTMGenerator {
             Reference = reference;
             OppositeName = oppositeName;
             RefinesName = refinesName;
+            RefDefaultValue = defaultValue;
         }
 
         /// <param name="operation">Operation which is missing a type.</param>
@@ -438,6 +445,7 @@ namespace CTMGenerator {
                 LowerBound = Reference.LowerBound,
                 UpperBound = Reference.UpperBound,
                 Type = GetReferenceType(types) ?? GetPrimitiveType(),
+                DefaultValue = RefDefaultValue,
                 Remarks = Reference.Remarks,
                 Summary = Reference.Summary
             };

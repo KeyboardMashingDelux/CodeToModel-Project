@@ -21,8 +21,9 @@
 		<PackageProjectUrl>https://github.com/KeyboardMashingDelux/CodeToModel-Project</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/KeyboardMashingDelux/CodeToModel-Project</RepositoryUrl>
 		<PackageTags>MDE, modeling, NMF, source code generator, roslyn</PackageTags>
-		<PackageReleaseNotes>Inital release</PackageReleaseNotes>
-		<Version>1.0.0</Version>
+		<PackageReleaseNotes>Added default value attribute support.</PackageReleaseNotes>
+		<Version>1.1.0</Version>
+		<PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
 	</PropertyGroup>
 
 	<ItemGroup Label="Private Package References">

@@ -35,6 +35,7 @@
 
 	<ItemGroup>
 	  <PackageReference Include="CTMCodeFixes" Version="1.0.0" />
+	  <PackageReference Include="CTMGenerator" Version="1.1.0" />
 	</ItemGroup>
 
 	<ItemGroup>

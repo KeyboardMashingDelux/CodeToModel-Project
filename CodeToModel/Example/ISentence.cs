@@ -26,12 +26,14 @@ namespace CodeToModel.Example {
         [LowerBound(0)]
         public IListExpression<IWord> Words { get; }
 
-        public ISetExpression<SentenceTypes> SentenceTypes { get; }
+        public ISetExpression<SentenceTypes> AllSentenceTypes { get; }
 
+        [DefaultValue("STANDARD")]
         public SentenceTypes MainSentenceType { get; set; }
 
         public IWord FirstWord { get; set; }
 
+        [DefaultValue("0")]
         public int? WordCount { get; set; }
 
         /// <summary>
